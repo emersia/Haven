@@ -237,6 +237,18 @@ _renderMessages(messages, lastReadMessageId) {
   // formatting after channel-members arrives on first load). (#5273)
   this._lastRenderedMessages = messages;
   this._lastRenderedReadId = lastReadMessageId;
+  // Track persona names seen in this channel so @PersonaName mentions
+  // resolve and ping the persona's owner. (#5349)
+  if (!(this._channelPersonas instanceof Map)) this._channelPersonas = new Map();
+  for (const m of messages) {
+    if (m && m.persona_id && m.persona_username) {
+      this._channelPersonas.set(String(m.persona_username).toLowerCase(), {
+        user_id: m.user_id,
+        name: m.persona_username,
+        avatar: m.persona_avatar || null,
+      });
+    }
+  }
   const container = document.getElementById('messages');
   container.innerHTML = '';
   // Only render the last MAX_DOM_MESSAGES to prevent OOM on large histories
@@ -481,7 +493,7 @@ _appendMessages(messages) {
       // Link to existing last message for grouping
       const lastEl = container.lastElementChild;
       if (lastEl && lastEl.dataset && lastEl.dataset.userId && lastEl.dataset.msgId) {
-        prevMsg = { user_id: parseInt(lastEl.dataset.userId), created_at: lastEl.dataset.time };
+        prevMsg = { user_id: parseInt(lastEl.dataset.userId), created_at: lastEl.dataset.time, persona_id: lastEl.dataset.personaId ? parseInt(lastEl.dataset.personaId) : null };
       }
     }
     fragment.appendChild(this._createMessageEl(msg, prevMsg));
@@ -532,12 +544,23 @@ _appendMessage(message, forceScroll = false) {
   const container = document.getElementById('messages');
   const lastMsg = container.lastElementChild;
 
+  // Track persona name for @PersonaName mention resolution. (#5349)
+  if (message && message.persona_id && message.persona_username) {
+    if (!(this._channelPersonas instanceof Map)) this._channelPersonas = new Map();
+    this._channelPersonas.set(String(message.persona_username).toLowerCase(), {
+      user_id: message.user_id,
+      name: message.persona_username,
+      avatar: message.persona_avatar || null,
+    });
+  }
+
   let prevMsg = null;
   // Only use last element for grouping if it's an actual message (not a system message)
   if (lastMsg && lastMsg.dataset && lastMsg.dataset.userId && lastMsg.dataset.msgId) {
     prevMsg = {
       user_id: parseInt(lastMsg.dataset.userId),
-      created_at: lastMsg.dataset.time
+      created_at: lastMsg.dataset.time,
+      persona_id: lastMsg.dataset.personaId ? parseInt(lastMsg.dataset.personaId) : null,
     };
   }
 
@@ -596,6 +619,13 @@ _createMessageEl(msg, prevMsg) {
   const isDmContext = !!(msg && msg._isDmRender) || !!(curCh && curCh.is_dm);
   const isCompact = prevMsg &&
     prevMsg.user_id === msg.user_id &&
+    // Persona / webhook / Discord-imported messages must each break the
+    // grouping chain so a different persona under the same account doesn't
+    // get folded under the previous persona's avatar. (#5349 follow-up)
+    (prevMsg.persona_id || null) === (msg.persona_id || null) &&
+    (prevMsg.is_webhook ? 1 : 0) === (msg.is_webhook ? 1 : 0) &&
+    (prevMsg.webhook_username || null) === (msg.webhook_username || null) &&
+    (prevMsg.imported_from || null) === (msg.imported_from || null) &&
     !msg.reply_to &&
     (new Date(msg.created_at) - new Date(prevMsg.created_at)) < 5 * 60 * 1000;
 
@@ -703,6 +733,7 @@ _createMessageEl(msg, prevMsg) {
     el.dataset.timeShort = new Date(msg.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
     el.dataset.msgId = msg.id;
     el.dataset.rawContent = msg.content;
+    if (msg.persona_id) el.dataset.personaId = String(msg.persona_id);
     if (msg.pinned) el.dataset.pinned = '1';
     if (msg.is_archived) el.dataset.archived = '1';
     if (msg._e2e) el.dataset.e2e = '1';
@@ -800,13 +831,15 @@ _createMessageEl(msg, prevMsg) {
     + (msg.is_webhook ? ' webhook-message' : '')
     + (msg.imported_from ? ' imported-message' : '')
     + (isAnnouncement ? ' announcement' : '');
-  // Add separator line between different users' message groups
-  if (prevMsg && prevMsg.user_id !== msg.user_id) el.classList.add('message-user-sep');
+  // Add separator line between different users' message groups (or between
+  // different personas under the same user).
+  if (prevMsg && (prevMsg.user_id !== msg.user_id || (prevMsg.persona_id || null) !== (msg.persona_id || null))) el.classList.add('message-user-sep');
   el.dataset.userId = msg.user_id;
   el.dataset.time = msg.created_at;
   el.dataset.timeShort = new Date(msg.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
   el.dataset.msgId = msg.id;
   el.dataset.rawContent = msg.content;
+  if (msg.persona_id) el.dataset.personaId = String(msg.persona_id);
   if (msg.pinned) el.dataset.pinned = '1';
   if (msg.is_archived) el.dataset.archived = '1';
   if (msg._e2e) el.dataset.e2e = '1';
