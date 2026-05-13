@@ -11,23 +11,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/). Haven uses [Sema
 
 ---
 
-## [3.16.0] — 2026-05-12
+## [3.16.1] — 2026-05-12
 
-Discord history import is now fully idempotent. Previously, importing overlapping exports (e.g. two people exporting the same server at different times) would produce duplicate messages and duplicate channels. Now the importer deduplicates everything automatically.
-
-### Added
-- **Idempotent Discord import.** Each imported message now stores its original Discord snowflake ID. Re-importing the same export, or importing a second overlapping export, skips messages that already exist rather than inserting them again. Native Haven messages are completely unaffected.
-- **Channel reuse on re-import.** Imported channels now store their Discord channel ID. If you import a second export that contains the same Discord channel, the new messages are appended to the existing Haven channel instead of creating a second duplicate channel.
-- **Import result details.** The import success message now reports how many duplicate messages were skipped and how many existing channels were updated, in addition to the usual counts.
-
----
-
-## [3.15.9] — 2026-05-12
-
-Polish translation update from contributor dvw1xx covering features shipped in 3.15.x.
-
-### Changed
-- **Polish (`pl`) locale updated (#5356, contributed by dvw1xx).** Adds translations for: `via_persona`, `recover_encryption`, `add_to_channel`, all `roles_*` entries (multi-role UI), and `reapply_access_tooltip`. Corrects `voice_active` to "Trwa rozmowa".
+### Fixed
+- Voice presence: clicking Leave Voice now clears the right voice panel and the channel sidebar count immediately, without waiting for the server's `voice-users-update` broadcast to come back. After the server emit, the leaver was no longer in the `voice:<code>` room, so the broadcast could miss them and the panel stayed showing them as a participant. Mirrors the optimistic update already done on join. (#5347)
+- Voice presence: defensively filter the local user out of incoming `voice-users-update` and `voice-count-update` payloads when not actually in voice on that channel, so a stale or in-flight broadcast can't re-populate the panel/sidebar after a leave.
 
 ---
 
