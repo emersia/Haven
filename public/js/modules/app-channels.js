@@ -330,6 +330,17 @@ _openChannelCtxMenu(code, btnEl) {
   menu.querySelectorAll('.admin-only').forEach(el => {
     el.style.display = canManageChannels ? '' : 'none';
   });
+  // Webhook button: also accessible to users with manage_webhooks permission
+  const webhooksCtxBtn = menu.querySelector('[data-action="webhooks"]');
+  const canManageWebhooks = canManageChannels || this._hasPerm('manage_webhooks');
+  if (webhooksCtxBtn) {
+    webhooksCtxBtn.style.display = canManageWebhooks ? '' : 'none';
+    // If user only has manage_webhooks (not full admin), show a separator above
+    if (!canManageChannels && canManageWebhooks) {
+      const adminSeps = menu.querySelectorAll('hr.channel-ctx-sep.admin-only');
+      if (adminSeps[0]) adminSeps[0].style.display = '';
+    }
+  }
   // Show delete button for users with delete_channel permission even if not admin
   const deleteBtn = menu.querySelector('[data-action="delete"]');
   if (deleteBtn && !canManageChannels && this._hasPerm('delete_channel')) {

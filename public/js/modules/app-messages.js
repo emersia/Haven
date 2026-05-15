@@ -998,6 +998,8 @@ _renderPinnedPanel(pins) {
 
   count.textContent = `📌 ${t(pins.length !== 1 ? 'pinned_panel.count_other' : 'pinned_panel.count_one', { count: pins.length })}`;
 
+  const canUnpin = this.user?.isAdmin || this._hasPerm('pin_message');
+
   if (pins.length === 0) {
     list.innerHTML = `<p class="muted-text" style="padding:12px">${t('pinned_panel.no_messages')}</p>`;
   } else {
@@ -1008,7 +1010,10 @@ _renderPinnedPanel(pins) {
           <span class="pinned-item-time">${this._formatTime(p.created_at)}</span>
         </div>
         <div class="pinned-item-content">${this._formatContent(p.content)}</div>
-        <div class="pinned-item-footer">${t('pinned_panel.pinned_by', { user: this._escapeHtml(p.pinned_by) })}</div>
+        <div class="pinned-item-footer" style="display:flex;align-items:center;justify-content:space-between">
+          <span>${t('pinned_panel.pinned_by', { user: this._escapeHtml(p.pinned_by) })}</span>
+          ${canUnpin ? `<button class="pinned-unpin-btn btn-xs" data-msg-id="${p.id}" title="${this._escapeHtml(t('msg_toolbar.unpin'))}">${this._escapeHtml(t('msg_toolbar.unpin'))}</button>` : ''}
+        </div>
       </div>
     `).join('');
   }
@@ -1021,6 +1026,17 @@ _renderPinnedPanel(pins) {
       const msgId = parseInt(item.dataset.msgId, 10);
       panel.style.display = 'none';
       if (msgId) this._jumpToMessage(msgId);
+    });
+  });
+
+  // Unpin buttons — stop propagation so click doesn't also jump to message
+  list.querySelectorAll('.pinned-unpin-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const msgId = parseInt(btn.dataset.msgId, 10);
+      if (!msgId) return;
+      const ok = await this._showConfirmModal(t('confirm.unpin_message'), '');
+      if (ok) this.socket.emit('unpin-message', { messageId: msgId });
     });
   });
 },

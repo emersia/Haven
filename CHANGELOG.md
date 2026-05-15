@@ -11,6 +11,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/). Haven uses [Sema
 
 ---
 
+## [3.16.6] — 2026-05-15
+
+### Added
+- **Unpin from pinned-message panel.** Users with the `pin_message` permission (or admin) now see an **Unpin** button on every entry in the pinned-messages panel. Clicking it shows an "are you sure?" confirmation before removing the pin — no more having to scroll back to the original message, especially useful for encrypted DMs where that scroll is very far.
+
+### Fixed
+- **Webhook permission was admin-only despite a dedicated `manage_webhooks` role permission.** The `create-webhook`, `get-webhooks`, `delete-webhook`, and `toggle-webhook` socket handlers all rejected non-admin users even when they had `manage_webhooks` granted through a role. Now those handlers (and the per-channel Webhooks entry in the channel context menu) are accessible to any user with `manage_webhooks`. The bot-manager modal in Admin Settings remains admin-only.
+
+---
+
+## [3.16.5] — 2026-05-14
+
+### Fixed
+- **Editing messages in DM PiP did nothing.** The server's `edit-message` handler always resolved the target channel from `socket.currentChannel`. When a user was viewing a server channel but had a DM open in the floating PiP panel, `socket.currentChannel` pointed to the server channel — so the message lookup failed silently, the client's optimistic edit was rolled back, and nothing happened. The handler now accepts an optional `channelCode` from the client and falls back to `socket.currentChannel` (same pattern used by `delete-message`). The client now sends `channelCode` when editing from the PiP panel.
+- **Encrypted image upload failure toast now shows the specific error.** When uploading an image in an E2E DM fails, the "Encrypted image upload failed" toast now includes the underlying error message (e.g. "Upload failed (403)" or "E2E not ready") to help diagnose the cause. Both the image path (`_uploadImage`) and the general file path (`_maybeUploadEncryptedDmFile`) are updated.
+
+---
+
 ## [3.16.4] — 2026-05-14
 
 ### Fixed
