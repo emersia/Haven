@@ -11,6 +11,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/). Haven uses [Sema
 
 ---
 
+## [3.16.11] — 2026-05-16
+
+### Fixed
+- **Removed servers no longer reappear after a restart.** `ServerManager.add()` now honors the local "removed" set on bootstrap and sync paths — only an explicit click on **Add Server** in the modal can resurrect a previously-removed entry. Previously, every code path that called `add()` (Desktop history merge, Sync Servers, encrypted-backup pull) would silently delete the URL from the removed set and re-add it, so deleting a server in Manage Servers only stuck for one session.
+- **Transient server restarts no longer log users out.** The socket `connect_error` handler now requires three consecutive auth errors before clearing the token and bouncing to the login page, instead of nuking the session on the first error. A single transient `Authentication required` / `Session expired` during a server restart (DB not yet ready, middleware racing init) is treated as recoverable. The streak resets on a successful connect.
+
+---
+
 ## [3.16.10] — 2026-05-15
 
 ### Fixed
