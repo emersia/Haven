@@ -1415,12 +1415,12 @@
       </div>
 
       <div class="download-card fade-in">
-        <h2>&#x2B21; Haven Server &mdash; v3.16.6</h2>
+        <h2>&#x2B21; Haven Server &mdash; v3.16.10</h2>
         <p class="download-version">Latest stable release &middot; Windows, macOS &amp; Linux &middot; ~5 MB</p>
 
         <div class="download-btn-group">
-          <a href="https://github.com/ancsemi/Haven/archive/refs/tags/v3.16.6.zip" class="btn btn-primary download-main">
-            <span class="icon">&#x2B07;</span> Download v3.16.6 (.zip)
+          <a href="https://github.com/ancsemi/Haven/archive/refs/tags/v3.16.10.zip" class="btn btn-primary download-main">
+            <span class="icon">&#x2B07;</span> Download v3.16.10 (.zip)
           </a>
           <div class="download-alt-links">
             <a href="https://github.com/ancsemi/Haven" target="_blank">&#9965; View on GitHub</a>
@@ -1437,7 +1437,23 @@
           <div class="version-list">
             <div class="version-list-inner">
               <div class="version-item">
-                <div><span class="v-name">v3.16.6</span><span class="v-tag latest">Latest</span> &mdash; Added Unpin button to the pinned-message panel (visible to users with the <code>pin_message</code> permission or admin). Fixed webhook management being locked to admins despite a dedicated <code>manage_webhooks</code> permission; users with that permission can now create, list, delete, and toggle per-channel webhooks</div>
+                <div><span class="v-name">v3.16.10</span><span class="v-tag latest">Latest</span> &mdash; Fixed displayed server version being stuck at v3.16.5 regardless of which release was installed (#5364 &mdash; package.json was bumped off-by-one in v3.16.6 and never corrected). Also ships the originally-intended v3.16.5 code changes: editing a message from a DM PiP now works correctly, and encrypted upload failure toasts show the specific error</div>
+                <a href="https://github.com/ancsemi/Haven/archive/refs/tags/v3.16.10.zip">Download &rarr;</a>
+              </div>
+              <div class="version-item">
+                <div><span class="v-name">v3.16.9</span> &mdash; Fixed not appearing in the voice panel or sidebar while in a voice channel after a socket reconnect caused the server snapshot to race ahead of the rejoin re-registration</div>
+                <a href="https://github.com/ancsemi/Haven/archive/refs/tags/v3.16.9.zip">Download &rarr;</a>
+              </div>
+              <div class="version-item">
+                <div><span class="v-name">v3.16.8</span> &mdash; Fixed phantom unread badge on the current channel after returning from background: incoming messages bumped the badge while the window was hidden even if the user was already at the bottom; badge now clears immediately on window focus when coupled to the bottom</div>
+                <a href="https://github.com/ancsemi/Haven/archive/refs/tags/v3.16.8.zip">Download &rarr;</a>
+              </div>
+              <div class="version-item">
+                <div><span class="v-name">v3.16.7</span> &mdash; Images attached alongside a persona message now send as the persona instead of the real account. Persona badge was showing &ldquo;??&rdquo; prepended to the label; now shows the correct icon</div>
+                <a href="https://github.com/ancsemi/Haven/archive/refs/tags/v3.16.7.zip">Download &rarr;</a>
+              </div>
+              <div class="version-item">
+                <div><span class="v-name">v3.16.6</span> &mdash; Added Unpin button to the pinned-message panel (visible to users with the <code>pin_message</code> permission or admin). Fixed webhook management being locked to admins despite a dedicated <code>manage_webhooks</code> permission; users with that permission can now create, list, delete, and toggle per-channel webhooks</div>
                 <a href="https://github.com/ancsemi/Haven/archive/refs/tags/v3.16.6.zip">Download &rarr;</a>
               </div>
               <div class="version-item">
