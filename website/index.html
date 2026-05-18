@@ -1415,12 +1415,12 @@
       </div>
 
       <div class="download-card fade-in">
-        <h2>&#x2B21; Haven Server &mdash; v3.16.10</h2>
+        <h2>&#x2B21; Haven Server &mdash; v3.16.13</h2>
         <p class="download-version">Latest stable release &middot; Windows, macOS &amp; Linux &middot; ~5 MB</p>
 
         <div class="download-btn-group">
-          <a href="https://github.com/ancsemi/Haven/archive/refs/tags/v3.16.10.zip" class="btn btn-primary download-main">
-            <span class="icon">&#x2B07;</span> Download v3.16.10 (.zip)
+          <a href="https://github.com/ancsemi/Haven/archive/refs/tags/v3.16.13.zip" class="btn btn-primary download-main">
+            <span class="icon">&#x2B07;</span> Download v3.16.13 (.zip)
           </a>
           <div class="download-alt-links">
             <a href="https://github.com/ancsemi/Haven" target="_blank">&#9965; View on GitHub</a>
@@ -1437,7 +1437,19 @@
           <div class="version-list">
             <div class="version-list-inner">
               <div class="version-item">
-                <div><span class="v-name">v3.16.10</span><span class="v-tag latest">Latest</span> &mdash; Fixed displayed server version being stuck at v3.16.5 regardless of which release was installed (#5364 &mdash; package.json was bumped off-by-one in v3.16.6 and never corrected). Also ships the originally-intended v3.16.5 code changes: editing a message from a DM PiP now works correctly, and encrypted upload failure toasts show the specific error</div>
+                <div><span class="v-name">v3.16.13</span><span class="v-tag latest">Latest</span> &mdash; Channel and sub-channel composers are now drag-resizable up to 60% of the viewport (#5327). New sub-channels inherit their parent channel's role access on creation (#5328). Voice chat: deferred soft-leave on transient socket blips so quick reconnects no longer tear down the mic and peers, plus a self-heal that emits voice-rejoin automatically when the right panel notices we&rsquo;ve dropped off the server roster &mdash; no more manual leave+rejoin churn</div>
+                <a href="https://github.com/ancsemi/Haven/archive/refs/tags/v3.16.13.zip">Download &rarr;</a>
+              </div>
+              <div class="version-item">
+                <div><span class="v-name">v3.16.12</span> &mdash; Voice chat audit: fixed missing-self in the right panel after server restart / reconnect races, stale roster ghosts after a reboot, and the &ldquo;clicked Start Voice 15 times during an outage and got 15 toasts at once&rdquo; spam-click flood</div>
+                <a href="https://github.com/ancsemi/Haven/archive/refs/tags/v3.16.12.zip">Download &rarr;</a>
+              </div>
+              <div class="version-item">
+                <div><span class="v-name">v3.16.11</span> &mdash; Removed servers no longer reappear after a restart (Desktop bootstrap and sync paths now honor the local removed-set). Transient server restarts no longer log users out &mdash; the auth-error handler now requires three consecutive errors before bouncing to login</div>
+                <a href="https://github.com/ancsemi/Haven/archive/refs/tags/v3.16.11.zip">Download &rarr;</a>
+              </div>
+              <div class="version-item">
+                <div><span class="v-name">v3.16.10</span> &mdash; Fixed displayed server version being stuck at v3.16.5 regardless of which release was installed (#5364 &mdash; package.json was bumped off-by-one in v3.16.6 and never corrected). Also ships the originally-intended v3.16.5 code changes: editing a message from a DM PiP now works correctly, and encrypted upload failure toasts show the specific error</div>
                 <a href="https://github.com/ancsemi/Haven/archive/refs/tags/v3.16.10.zip">Download &rarr;</a>
               </div>
               <div class="version-item">

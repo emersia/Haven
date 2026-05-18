@@ -11,6 +11,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/). Haven uses [Sema
 
 ---
 
+## [3.16.13] — 2026-05-17
+
+### Added
+- **Channel and sub-channel composers are now drag-resizable (#5327).** Channel text areas previously auto-grew up to a hard cap of 5 lines and could not be enlarged further, which made composing longer multi-paragraph messages painful. A vertical drag handle (the same UI shipped for PiP DMs in v3.16.x) now sits at the top of the message-input area for channels and threads: grab it and drag up to expand the textarea up to 60 % of the viewport, drag back down to collapse. The dragged height is sticky across keystrokes and message sends — internally, the manual height is written as `min-height` inline on the textarea, which overrides the auto-grow's CSS `max-height` cap until the user manually shrinks it again.
+- **Sub-channels inherit parent channel role access on creation (#5328).** When a sub-channel is created under a parent channel that has role-based access configured (e.g. a `@Mods` role granted on promote), the new sub-channel automatically copies the parent's `role_channel_access` rows and grants membership to current holders of any role marked `grant_on_promote`. Previously, every new sub-channel started with no role access at all, so admins had to re-add every role to every sub-channel by hand. Existing sub-channels are not touched (so any per-sub customisation you've already set up is preserved); the inheritance only runs at creation time, and per-sub access can still be customised afterwards in Channel Settings.
+
+### Fixed
+- **Voice chat: "I lose myself in the right panel after a while and have to leave + rejoin, which kicks everyone else out."** Two converging issues were driving the symptom on long-lived sessions:
+  - **Transient socket blips were tearing down the entire voice session.** The `disconnect` handler used to immediately call `_softLeave()` — flipping `inVoice = false`, killing the mic stream and every `RTCPeerConnection` — on every dropped frame from the socket. Socket.io reconnects within a few hundred milliseconds on most blips (Electron renderer momentarily suspending, brief Wi-Fi hiccup, server-side keepalive miss), but by the time we reconnected the voice session was already in pieces and the panel could no longer self-inject us because `inVoice` was false. The teardown is now deferred by 2 seconds; if the socket reconnects in time (the common case), the soft-leave is cancelled and `voice-rejoin` rebinds our voice slot to the new socketId without rebuilding the mic or peers.
+  - **When the panel did still drop us, we'd silently stay broken until a manual leave+rejoin.** The existing defensive self-injection patched the visible roster but never re-registered us with the server, so peers still had our stale socketId and our audio was dead until we manually toggled. The `voice-users-update` handler now also emits `voice-rejoin` (throttled to once per 3 s) whenever it has to inject self into the roster, so the server cleans up any stale entry of us and re-broadcasts a fresh roster to peers automatically.
+
+---
+
 ## [3.16.12] — 2026-05-16
 
 ### Fixed
