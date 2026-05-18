@@ -2070,17 +2070,24 @@ _setupUI() {
     }
   }
 
-  // PiP input area height resize — drag the top handle upward to expand the textarea
+  // PiP input area height resize — drag the top handle upward to expand the textarea.
+  // Used by DM PiP, thread input, AND the main channel composer (#5327).
+  // We set both `height` and `min-height` inline so the auto-grow `input`
+  // handler (which sets `height = 'auto'` then caps at a small default) can't
+  // collapse the textarea back down after the user has manually expanded it.
   document.querySelectorAll('.pip-input-resizer').forEach(handle => {
     let startY = 0;
     let startHeight = 0;
     let ta = null;
+    let cap = 600;
 
     const onMove = (e) => {
       if (!ta) return;
       const delta = startY - e.clientY; // positive when dragging up
-      const newHeight = Math.max(34, Math.min(200, startHeight + delta));
+      const newHeight = Math.max(34, Math.min(cap, startHeight + delta));
       ta.style.height = `${newHeight}px`;
+      ta.style.minHeight = `${newHeight}px`;
+      ta.style.maxHeight = `${cap}px`;
     };
 
     const onUp = () => {
@@ -2094,6 +2101,9 @@ _setupUI() {
       if (!ta) return;
       startY = e.clientY;
       startHeight = ta.getBoundingClientRect().height;
+      // Cap manual expansion at ~60% of viewport so the textarea can never
+      // swallow the entire chat pane. Min 200px on tiny windows.
+      cap = Math.max(200, Math.floor(window.innerHeight * 0.6));
       e.preventDefault();
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);

@@ -4804,7 +4804,7 @@ select.cfn-select.cfn-input {
   display: flex;
   align-items: flex-end;
   gap: 8px;
-  padding: 12px 20px 16px;
+  padding: 16px 20px 16px;
   position: relative;
   /* Above #fx-layers (z:99990) so theme particles/embers don't float over
      the textarea, send button, and toolbar. The composer is a critical
