@@ -364,6 +364,10 @@ _applyServerSettings() {
     if (whitelistToggle) {
       whitelistToggle.checked = this.serverSettings.whitelist_enabled === 'true';
     }
+    const adminPwReset = document.getElementById('admin-password-reset-enabled');
+    if (adminPwReset) {
+      adminPwReset.checked = this.serverSettings.admin_password_reset_enabled === 'true';
+    }
 
     // ── Auto-backup form ───
     const abEnabled = document.getElementById('auto-backup-enabled');
@@ -653,6 +657,7 @@ _snapshotAdminSettings() {
     session_duration_days: this.serverSettings.session_duration_days || '7',
     max_message_chars: this.serverSettings.max_message_chars || '2000',
     update_banner_admin_only: this.serverSettings.update_banner_admin_only || 'false',
+    admin_password_reset_enabled: this.serverSettings.admin_password_reset_enabled || 'false',
     default_theme: this.serverSettings.default_theme || '',
     published_themes: this.serverSettings.published_themes || '[]',
     custom_tos: this.serverSettings.custom_tos || '',
@@ -764,6 +769,12 @@ _saveAdminSettings() {
   const updateBannerAdminOnly = document.getElementById('update-banner-admin-only')?.checked ? 'true' : 'false';
   if (updateBannerAdminOnly !== (snap.update_banner_admin_only || 'false')) {
     this.socket.emit('update-server-setting', { key: 'update_banner_admin_only', value: updateBannerAdminOnly });
+    changed = true;
+  }
+
+  const adminPwReset = document.getElementById('admin-password-reset-enabled')?.checked ? 'true' : 'false';
+  if (adminPwReset !== (snap.admin_password_reset_enabled || 'false')) {
+    this.socket.emit('update-server-setting', { key: 'admin_password_reset_enabled', value: adminPwReset });
     changed = true;
   }
 
