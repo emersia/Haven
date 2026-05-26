@@ -18,6 +18,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/). Haven uses [Sema
 
 ---
 
+## [3.17.4] — 2026-05-26
+
+### Fixed
+- **iOS Web (Safari + Chrome + every other iOS browser): no audio from other people in voice channels and no audio on incoming screen shares.** WebKit's `MediaStreamAudioSourceNode` produces silence for audio tracks pulled from an `RTCPeerConnection` (long-standing WebKit bug, every iOS browser inherits it because Apple forces them all onto WebKit). Haven was routing every incoming remote audio track through Web Audio (`createMediaStreamSource → gainNode → destination`) and muting the `<audio>` element itself, which works on every other browser but means iOS users heard absolute nothing in voice — calls looked connected, peer cards lit up, but the audio was a black hole. Now iOS specifically skips the Web Audio graph and lets the `<audio>` element play the stream natively, using the element's own `volume` property for per-user / per-screen-share volume. Trade-off on iOS only: no >100% volume boost and no per-remote-peer talking analyser (the server-pushed `voice-speaking` events still drive talk indicators), in exchange for audio that actually plays. Affects `_playAudio` and `_playScreenAudio` in `voice.js`. iOS video was working already (`<video playsinline autoplay>` is set on webcam and screen-share video tiles) — the user-visible "video and audio both broken" symptom was actually audio-only, but with audio silent the call felt completely dead.
+
+### Restored
+- **Opt-in toggle: "Apply voice processing to screen-share audio" (Settings → Debug).** 3.17.3 removed echo cancellation / noise suppression / auto gain control from screen-share audio unconditionally so music and game audio would sound right, which is the correct default for almost everyone. But for the minority sharing voice content (tutorial narration, podcasts, a recorded meeting) the cleanup actually helps, and removing it outright was too aggressive. The original filter chain is back as an opt-in debug toggle (`pref-debug-screen-share-voice-proc`, localStorage key `screen_share_voice_processing`) — default off (matching 3.17.3 behavior), flip it on if you're sharing voice content. Microphone always gets full voice processing regardless.
+
+---
+
 ## [3.17.3] — 2026-05-26
 
 ### Fixed
