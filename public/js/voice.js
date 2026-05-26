@@ -872,20 +872,17 @@ class VoiceManager {
         audio: true,
       };
 
-      // #5379 — When the debug toggle is on, request raw screen audio with
-      // echo cancellation explicitly disabled. Chromium defaults to applying
-      // echoCancellation to getDisplayMedia audio, which can hollow out music
-      // and game audio for listeners. The user can flip this in
-      // Settings → Debug → "Disable echo cancellation on screen-share audio".
-      try {
-        if (localStorage.getItem('debug_disable_screen_echo_cancel') === '1') {
-          displayMediaOptions.audio = {
-            echoCancellation: false,
-            autoGainControl: false,
-            noiseSuppression: false,
-          };
-        }
-      } catch {}
+      // #5379 — Always request raw screen audio with voice-call processing
+      // disabled. Chromium defaults to applying echoCancellation /
+      // noiseSuppression / autoGainControl to getDisplayMedia audio, which is
+      // tuned for voice and hollows out music and game audio for listeners.
+      // Mic capture (getUserMedia) is a separate stream and still gets full
+      // voice processing — only the captured *screen* audio is left raw.
+      displayMediaOptions.audio = {
+        echoCancellation: false,
+        autoGainControl: false,
+        noiseSuppression: false,
+      };
 
       // These options aren't supported in Electron's Chromium — only add them
       // when running in a regular browser to avoid immediate rejection.

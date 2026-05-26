@@ -1749,17 +1749,11 @@ _setupDebugSection() {
     } catch {}
   });
 
-  // #5379 — disable echo cancellation on screen-share audio
-  const ecCb = document.getElementById('pref-debug-disable-screen-echo-cancel');
-  if (ecCb) {
-    try { ecCb.checked = localStorage.getItem('debug_disable_screen_echo_cancel') === '1'; } catch {}
-    ecCb.addEventListener('change', () => {
-      try {
-        if (ecCb.checked) localStorage.setItem('debug_disable_screen_echo_cancel', '1');
-        else localStorage.removeItem('debug_disable_screen_echo_cancel');
-      } catch {}
-    });
-  }
+  // #5379 — echo-cancellation-on-screen-share toggle removed in 3.17.x.
+  // Full-fidelity (echoCancellation/autoGainControl/noiseSuppression all off)
+  // is now the unconditional default for getDisplayMedia audio because mic
+  // capture is a separate stream and the screen-audio EC was hollowing out
+  // music and games for listeners. Any old localStorage entry is harmless.
 
   // #5380 — always join voice muted
   const moCb = document.getElementById('pref-voice-mute-on-join');
