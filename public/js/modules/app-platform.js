@@ -547,6 +547,8 @@ async _setupDesktopAppPrefs() {
   const trayEl    = document.getElementById('pref-minimize-to-tray');
   const sdrEl     = document.getElementById('pref-force-sdr');
   const menuBarEl = document.getElementById('pref-hide-menu-bar');
+  const gpuVsyncEl     = document.getElementById('pref-disable-gpu-vsync');
+  const unlimitFpsEl   = document.getElementById('pref-unlimit-frame-rate');
   const versionEl = document.getElementById('desktop-version-info');
 
   if (startEl) { startEl.checked = !!prefs.startOnLogin; }
@@ -555,6 +557,8 @@ async _setupDesktopAppPrefs() {
   if (trayEl)  { trayEl.checked  = !!prefs.minimizeToTray; }
   if (sdrEl)   { sdrEl.checked   = !!prefs.forceSDR; }
   if (menuBarEl) { menuBarEl.checked = !!prefs.hideMenuBar; }
+  if (gpuVsyncEl)   { gpuVsyncEl.checked   = !!prefs.disableGpuVsync; }
+  if (unlimitFpsEl) { unlimitFpsEl.checked = !!prefs.unlimitFrameRate; }
 
   // Show desktop version
   if (versionEl && window.havenDesktop.getVersion) {
@@ -593,6 +597,27 @@ async _setupDesktopAppPrefs() {
   menuBarEl?.addEventListener('change', async () => {
     try { await window.havenDesktop.prefs.setHideMenuBar(menuBarEl.checked); }
     catch { menuBarEl.checked = !menuBarEl.checked; }
+  });
+
+  // (#35) Nvidia G-Sync / VRR FPS-drop workarounds. Both flags are Chromium
+  // command-line switches read at app boot, so flipping them only takes effect
+  // after a restart — surface a toast saying so.
+  gpuVsyncEl?.addEventListener('change', async () => {
+    try {
+      const res = await window.havenDesktop.prefs.setDisableGpuVsync(gpuVsyncEl.checked);
+      if (res?.requiresRestart) {
+        this._showToast?.('GPU vsync setting updated. Restart Haven Desktop to apply.', 'info');
+      }
+    } catch { gpuVsyncEl.checked = !gpuVsyncEl.checked; }
+  });
+
+  unlimitFpsEl?.addEventListener('change', async () => {
+    try {
+      const res = await window.havenDesktop.prefs.setUnlimitFrameRate(unlimitFpsEl.checked);
+      if (res?.requiresRestart) {
+        this._showToast?.('Frame-rate cap setting updated. Restart Haven Desktop to apply.', 'info');
+      }
+    } catch { unlimitFpsEl.checked = !unlimitFpsEl.checked; }
   });
 },
 

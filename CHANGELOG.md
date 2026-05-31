@@ -11,6 +11,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/). Haven uses [Sema
 
 ---
 
+## [3.19.1] — 2026-05-31
+
+### Fixed
+- **Desktop App: settings checkboxes and keybind recorders unresponsive until the matching left-nav was clicked (Haven-Desktop #36).** The Shortcuts section's record buttons and the Desktop App / Debug section's preference change-listeners were only wired up *on* the click of the left-nav item that owns them, so a user who opened Settings and scrolled straight to a checkbox or keybind recorder would find them unresponsive until they happened to click "Shortcuts" or "Desktop App" in the nav. Both Desktop-only sections are now initialised eagerly the moment Settings opens, so every control is responsive immediately regardless of where the user scrolls.
+
+### Added
+- **Two new opt-in Desktop debug toggles for Nvidia G-Sync / VRR FPS-drop (Haven-Desktop #35).** Under `Settings → Debug` (Desktop only): "Disable GPU vsync (Nvidia G-Sync fix)" and "Remove Chromium frame-rate cap (Nvidia G-Sync fix)". Workarounds for the upstream Chromium issue where renderers on Nvidia G-Sync displays get stuck negotiating a tiny refresh rate after the window is hidden/restored and never recover (whole app drops to ~5 FPS). Off by default because both flags can introduce visible tearing on non-VRR monitors. Require Haven Desktop 1.4.21+ and a restart to take effect.
+
+---
+
 ## [3.19.0] — 2026-06-01
 
 ### Added

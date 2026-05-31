@@ -2932,11 +2932,22 @@ _setupUI() {
       document.getElementById('section-desktop-shortcuts')?.style.removeProperty('display');
       document.getElementById('section-desktop-app')?.style.removeProperty('display');
       document.getElementById('pref-force-sdr-row')?.style.removeProperty('display');
+      document.getElementById('pref-disable-gpu-vsync-row')?.style.removeProperty('display');
+      document.getElementById('pref-unlimit-frame-rate-row')?.style.removeProperty('display');
     }
     // Eagerly fetch data that requires async calls so sections don't
     // sit on "Loading..." indefinitely if the user never clicks the nav item.
     loadTotpStatus();
     if (this.user?.isAdmin) this._loadRoles();
+    // (#36) Eagerly wire up Desktop-only sections too. Without this the Shortcut
+    // record buttons and Desktop App / Debug prefs only get their event handlers
+    // attached when the user clicks the matching left-nav item, so a user who
+    // opens Settings and scrolls straight to a checkbox or to the keybind
+    // recorder finds them unresponsive until they happen to click the nav.
+    if (window.havenDesktop?.isDesktopApp) {
+      this._setupDesktopShortcuts?.();
+      this._setupDesktopAppPrefs?.();
+    }
   };
   document.getElementById('open-settings-btn').addEventListener('click', openSettingsModal);
   document.getElementById('mobile-settings-btn')?.addEventListener('click', () => {
