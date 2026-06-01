@@ -2185,34 +2185,74 @@ _showImageContextMenu(e, src) {
       a.click();
       a.remove();
     } else if (action === 'copy') {
-      try {
-        // Always convert via canvas to guarantee a valid image/png blob
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        const loaded = new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
-        img.src = src;
-        await loaded;
-        const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        canvas.getContext('2d').drawImage(img, 0, 0);
-        const pngBlob = await new Promise((res, rej) => {
-          canvas.toBlob(b => b ? res(b) : rej(new Error('canvas.toBlob returned null')), 'image/png');
+      // Hide the menu immediately so it doesn't sit on screen during
+      // the async fetch + clipboard write. We still control the toast.
+      this._hideImageContextMenu();
+      (async () => {
+        const fetchAsBlob = async () => {
+          const resp = await fetch(src, { credentials: 'same-origin' });
+          if (!resp.ok) throw new Error('fetch ' + resp.status);
+          return await resp.blob();
+        };
+        const toPngBlob = async (blob) => {
+          if (blob.type === 'image/png') return blob;
+          const bitmap = await createImageBitmap(blob);
+          const canvas = document.createElement('canvas');
+          canvas.width = bitmap.width;
+          canvas.height = bitmap.height;
+          canvas.getContext('2d').drawImage(bitmap, 0, 0);
+          return await new Promise((res, rej) =>
+            canvas.toBlob(b => b ? res(b) : rej(new Error('toBlob null')), 'image/png'));
+        };
+        const blobToDataUrl = (blob) => new Promise((res, rej) => {
+          const r = new FileReader();
+          r.onload = () => res(r.result);
+          r.onerror = () => rej(r.error || new Error('FileReader failed'));
+          r.readAsDataURL(blob);
         });
 
-        if (typeof ClipboardItem !== 'undefined' && navigator.clipboard && navigator.clipboard.write) {
-          await navigator.clipboard.write([new ClipboardItem({ 'image/png': pngBlob })]);
-        } else {
-          // Fallback: copy data URL as text
-          const reader = new FileReader();
-          const dataUrl = await new Promise(r => { reader.onload = () => r(reader.result); reader.readAsDataURL(pngBlob); });
-          await navigator.clipboard.writeText(dataUrl);
+        // Strategy 1: Electron desktop IPC (most reliable — main process
+        // clipboard has no user-gesture requirement).
+        if (window.havenDesktop?.clipboardWriteImage) {
+          try {
+            const blob = await fetchAsBlob();
+            const png = await toPngBlob(blob);
+            const dataUrl = await blobToDataUrl(png);
+            const res = await window.havenDesktop.clipboardWriteImage(dataUrl);
+            if (res?.ok) { this._showToast('Image copied to clipboard', 'success'); return; }
+            console.warn('[Haven] IPC clipboard write failed:', res?.reason);
+          } catch (err) {
+            console.warn('[Haven] IPC clipboard path errored:', err);
+          }
         }
-        this._showToast('Image copied to clipboard', 'success');
-      } catch (err) {
-        console.error('[Haven] Copy image failed:', err);
-        this._showToast('Failed to copy image', 'error');
-      }
+
+        // Strategy 2: web navigator.clipboard.write with promise-based
+        // ClipboardItem (preserves gesture chain across async fetch).
+        try {
+          if (typeof ClipboardItem === 'undefined' || !navigator.clipboard?.write) {
+            throw new Error('Clipboard API unavailable');
+          }
+          const blobPromise = (async () => toPngBlob(await fetchAsBlob()))();
+          await navigator.clipboard.write([
+            new ClipboardItem({ 'image/png': blobPromise })
+          ]);
+          this._showToast('Image copied to clipboard', 'success');
+          return;
+        } catch (err) {
+          console.error('[Haven] Web clipboard.write failed:', err);
+          // Strategy 3: at least put the URL on the clipboard so the
+          // user has something to paste.
+          try {
+            await navigator.clipboard.writeText(src);
+            this._showToast('Copied image URL (browser blocked image copy)', 'warning');
+            return;
+          } catch (err2) {
+            console.error('[Haven] writeText fallback failed:', err2);
+            this._showToast('Failed to copy image: ' + (err.message || err), 'error');
+          }
+        }
+      })();
+      return;
     } else if (action === 'open') {
       window.open(src, '_blank', 'noopener,noreferrer');
     }
