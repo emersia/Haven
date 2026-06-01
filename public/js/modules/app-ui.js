@@ -4088,8 +4088,6 @@ _copyTextFallback(text, onCopied) {
   } catch { /* could not copy */ }
 },
 
-_setupServerBar() {
-
 /** Push the current server list to the server-side encrypted backup. */
 _pushServerListToServer() {
   const wrappingKey = this._e2eWrappingKey || sessionStorage.getItem('haven_e2e_wrap') || null;

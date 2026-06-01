@@ -820,7 +820,9 @@
   const guestShowBtn = document.getElementById('guest-login-show-btn');
   const guestForm = document.getElementById('guest-form');
   const guestBackBtn = document.getElementById('guest-back-btn');
-  const loginForm = document.getElementById('login-form');
+  // loginForm is already declared at the top of this IIFE (see line ~152).
+  // Re-declaring with `const` here was a fatal SyntaxError that blanked the
+  // entire login page (#5399 follow-up); reuse the outer binding.
   if (guestShowBtn && guestForm) {
     guestShowBtn.addEventListener('click', () => {
       hideError();
