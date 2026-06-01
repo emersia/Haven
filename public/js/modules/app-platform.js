@@ -100,9 +100,10 @@ _isNewerVersion(remote, local) {
   return false;
 },
 
-// ── Desktop App Banner + Promo Popup ────────────────────
-/** Show the "Get the Desktop App" banner and promo popup unless the user
- *  dismissed them or is already running inside Haven Desktop (Electron). */
+// ── Desktop App Banner (top bar only) ──────────────────
+/** Wire the "Get the Desktop App" banner in the top bar. The promo modal
+ *  itself is shown via the unified welcome-popup queue (see
+ *  `_initWelcomePopups`) — this function only handles the persistent banner. */
 _initDesktopAppBanner() {
   // Don't show if already in the desktop app
   if (window.havenDesktop || navigator.userAgent.includes('Electron')) return;
@@ -128,13 +129,13 @@ _initDesktopAppBanner() {
     }
   }
 
-  // ── Promo popup (centred modal) ──
-  if (localStorage.getItem('haven_desktop_promo_dismissed')) return;
-
+  // ── Wire the promo modal's close paths. The welcome-popup queue handles
+  // auto-show + seen-tracking; here we just make sure the buttons inside
+  // the modal hide it. ──
   const modal = document.getElementById('desktop-promo-modal');
   if (!modal) return;
 
-  // Detect platform for meta line
+  // Detect platform for the meta line
   const meta = document.getElementById('desktop-promo-meta');
   if (meta) {
     const ua = navigator.userAgent.toLowerCase();
@@ -145,118 +146,17 @@ _initDesktopAppBanner() {
     meta.textContent = `${platform} \u2022 v1.0.0`;
   }
 
-  // Show after a short delay so the app finishes loading first
-  setTimeout(() => { modal.style.display = 'flex'; }, 1200);
-
-  // "Maybe later" closes without remembering
   const laterBtn = document.getElementById('desktop-promo-later');
-  if (laterBtn) {
-    laterBtn.addEventListener('click', () => {
-      const check = document.getElementById('desktop-promo-dismiss-check');
-      if (check && check.checked) {
-        localStorage.setItem('haven_desktop_promo_dismissed', '1');
-        // Also dismiss the banner if they chose "don't show again"
-        localStorage.setItem('haven_desktop_banner_dismissed', '1');
-        const banner = document.getElementById('desktop-app-banner');
-        if (banner) banner.style.display = 'none';
-      }
-      modal.style.display = 'none';
-    });
-  }
-
-  // "Install Haven" link — if checkbox checked, remember dismissal
+  if (laterBtn) laterBtn.addEventListener('click', () => { modal.style.display = 'none'; });
   const installBtn = document.getElementById('desktop-promo-install');
-  if (installBtn) {
-    installBtn.addEventListener('click', () => {
-      const check = document.getElementById('desktop-promo-dismiss-check');
-      if (check && check.checked) {
-        localStorage.setItem('haven_desktop_promo_dismissed', '1');
-        localStorage.setItem('haven_desktop_banner_dismissed', '1');
-        const banner = document.getElementById('desktop-app-banner');
-        if (banner) banner.style.display = 'none';
-      }
-      modal.style.display = 'none';
-    });
-  }
-
-  // Close on overlay click — respect "don't show again" checkbox
+  if (installBtn) installBtn.addEventListener('click', () => { modal.style.display = 'none'; });
   modal.addEventListener('click', (e) => {
-    if (e.target === modal) {
-      const check = document.getElementById('desktop-promo-dismiss-check');
-      if (check && check.checked) {
-        localStorage.setItem('haven_desktop_promo_dismissed', '1');
-        localStorage.setItem('haven_desktop_banner_dismissed', '1');
-        const banner = document.getElementById('desktop-app-banner');
-        if (banner) banner.style.display = 'none';
-      }
-      modal.style.display = 'none';
-    }
+    if (e.target === modal) modal.style.display = 'none';
   });
 },
-
-// ── Multi-Role Per-Channel Admin Notice ──────────────────
-/** One-time notice for admins explaining that multiple roles can now be
- *  assigned per channel. Shows after login with a "Don't show again" option. */
-_initMultiRoleNotice() {
-  if (!this.user?.isAdmin) return;
-  if (localStorage.getItem('haven_multi_role_notice_v1')) return;
-
-  const modal = document.createElement('div');
-  modal.id = 'multi-role-notice-modal';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999;backdrop-filter:blur(4px);';
-  modal.innerHTML = `
-    <div style="background:var(--bg-card);border:1px solid var(--border-light);border-radius:var(--radius);padding:28px 28px 22px;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.5);text-align:center;">
-      <div style="font-size:36px;margin-bottom:12px;">🎭</div>
-      <h3 style="margin:0 0 8px;font-size:18px;font-weight:700;color:var(--text-primary);">Multi-Role Permissions</h3>
-      <p style="margin:0 0 16px;font-size:13px;color:var(--text-secondary);line-height:1.6;">
-        Users can now hold <strong style="color:var(--text-primary);">multiple roles per channel</strong>.
-        Open a user's Role Assignment Center from the member list and assign as many roles as apply —
-        their permissions in that channel are the combined total of every role they hold.
-      </p>
-      <p style="margin:0 0 20px;font-size:12px;color:var(--text-muted);">
-        Use the member list gear icon or <strong>Admin → Members</strong> to manage per-channel role assignments.
-      </p>
-      <button id="multi-role-notice-ok" class="btn-primary" style="width:100%;margin-bottom:12px;">Got it</button>
-      <label style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px;color:var(--text-muted);cursor:pointer;">
-        <input type="checkbox" id="multi-role-notice-check" style="accent-color:var(--accent);cursor:pointer;">
-        Don't show this again
-      </label>
-    </div>
-  `;
-  document.body.appendChild(modal);
-
-  const dismiss = (permanent) => {
-    if (permanent) localStorage.setItem('haven_multi_role_notice_v1', '1');
-    modal.remove();
-  };
-
-  document.getElementById('multi-role-notice-ok').addEventListener('click', () => {
-    const check = document.getElementById('multi-role-notice-check');
-    dismiss(check?.checked);
-  });
-
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) {
-      const check = document.getElementById('multi-role-notice-check');
-      dismiss(check?.checked);
-    }
-  });
-},
-
-// ── Android Beta Banner + Sign-Up Popup ─────────────────
-/** Show the "Android Beta" banner and sign-up popup. Users enter their email
- *  and a prefilled mailto: link sends the opt-in request to the developer. */
+/** Wire the "Android Beta" banner in the top bar. The signup modal itself
+ *  is shown via the unified welcome-popup queue (see `_initWelcomePopups`). */
 _initAndroidBetaBanner() {
-  // ── v3 migration: Android app is now a full release; reset dismissals so
-  //    users who dismissed the old closed-beta popup see the new announcement ──
-  if (!localStorage.getItem('_ab_v3_migrated')) {
-    localStorage.removeItem('haven_android_beta_banner_dismissed');
-    localStorage.removeItem('haven_android_beta_promo_dismissed');
-    localStorage.removeItem('haven_ab_banner_nodisplay');
-    localStorage.removeItem('haven_ab_promo_nodisplay');
-    localStorage.setItem('_ab_v3_migrated', '1');
-  }
-
   // ── Top-bar banner ──
   // Only permanently hidden if user checked "Don't show this again";
   // the X button is session-only so it returns on next visit.
@@ -285,67 +185,166 @@ _initAndroidBetaBanner() {
     }
   }
 
-  // ── Promo popup (centred modal) ──
+  // ── Wire the modal's own close buttons (Maybe Later, Submit, overlay
+  // click) to just hide the modal. The welcome-popup queue takes care of
+  // marking the entry as seen and advancing to the next popup via a
+  // MutationObserver on display style. ──
   const modal = document.getElementById('android-beta-modal');
   if (!modal) return;
 
-  // Show popup on first visit (unless dismissed)
-  if (!localStorage.getItem('haven_ab_promo_nodisplay')) {
-    setTimeout(() => {
-      // Don't show if the desktop promo is already visible
-      const desktopPromo = document.getElementById('desktop-promo-modal');
-      if (desktopPromo && desktopPromo.style.display === 'flex') {
-        // Show after the desktop promo closes
-        const observer = new MutationObserver(() => {
-          if (desktopPromo.style.display === 'none' || desktopPromo.style.display === '') {
-            observer.disconnect();
-            setTimeout(() => { modal.style.display = 'flex'; }, 800);
-          }
-        });
-        observer.observe(desktopPromo, { attributes: true, attributeFilter: ['style'] });
-      } else {
-        modal.style.display = 'flex';
-      }
-    }, 2000);
-  }
-
-  // Close modal when user clicks the beta access link
   const submitBtn = document.getElementById('android-beta-submit');
   if (submitBtn) {
-    submitBtn.addEventListener('click', () => {
-      localStorage.setItem('haven_ab_promo_nodisplay', '1');
-      modal.style.display = 'none';
-    });
+    submitBtn.addEventListener('click', () => { modal.style.display = 'none'; });
   }
-
-  // "Maybe later" button
   const laterBtn = document.getElementById('android-beta-later');
   if (laterBtn) {
-    laterBtn.addEventListener('click', () => {
-      const check = document.getElementById('android-beta-dismiss-check');
-      if (check && check.checked) {
-        localStorage.setItem('haven_ab_promo_nodisplay', '1');
-        localStorage.setItem('haven_ab_banner_nodisplay', '1');
-        const banner = document.getElementById('android-beta-banner');
-        if (banner) banner.style.display = 'none';
-      }
-      modal.style.display = 'none';
-    });
+    laterBtn.addEventListener('click', () => { modal.style.display = 'none'; });
+  }
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.style.display = 'none';
+  });
+},
+
+// ── Welcome Popup Queue (#5391 followup) ───────────────
+/** Unified first-time-visit popup sequencer. Replaces the previous
+ *  uncoordinated `setTimeout`-soup where each promo modal raced the others.
+ *  Behavior:
+ *    1. Reads a per-popup "seen" map from localStorage. Any popup whose id
+ *       is already in the map is skipped forever.
+ *    2. Migrates legacy per-popup dismissal keys into the map so users who
+ *       hit "Don't show again" in older versions don't see those same
+ *       popups again after upgrading.
+ *    3. Shows remaining popups one at a time, injecting a footer with
+ *       "Next" + "Skip all" so users can click through or bail in one go.
+ *    4. Any close action (Next, Skip all, X, overlay click, Maybe Later,
+ *       primary CTA) marks the current popup as seen. Skip all also marks
+ *       every remaining popup as seen in one shot.
+ *    5. NEW popups added in future versions are NOT auto-dismissed by a
+ *       previous "Skip all" — only ids the user has actually been shown
+ *       (or that pre-existed at migration time) get persisted as seen. */
+_initWelcomePopups() {
+  // ── Load + migrate dismissal state ──
+  let seen = {};
+  try { seen = JSON.parse(localStorage.getItem('haven_welcome_seen_v1') || '{}') || {}; } catch { seen = {}; }
+
+  // Legacy key migration. Run once on first load after upgrade. Stays
+  // correct on subsequent loads because we only ever set, never clear.
+  if (localStorage.getItem('haven_desktop_promo_dismissed') && !seen.desktop_app_promo) {
+    seen.desktop_app_promo = 1;
+  }
+  if (localStorage.getItem('haven_ab_promo_nodisplay') && !seen.android_app_promo) {
+    seen.android_app_promo = 1;
+  }
+  if (localStorage.getItem('haven_multi_role_notice_v1')) {
+    // The multi-role popup was removed in 3.22.0; mark as seen defensively
+    // so the migration path is consistent even though the popup is gone.
+    seen.multi_role_notice_v1 = 1;
   }
 
-  // Close on overlay click — respect "don't show again" checkbox
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) {
-      const check = document.getElementById('android-beta-dismiss-check');
-      if (check && check.checked) {
-        localStorage.setItem('haven_ab_promo_nodisplay', '1');
-        localStorage.setItem('haven_ab_banner_nodisplay', '1');
-        const banner = document.getElementById('android-beta-banner');
-        if (banner) banner.style.display = 'none';
-      }
-      modal.style.display = 'none';
+  const persist = () => {
+    try { localStorage.setItem('haven_welcome_seen_v1', JSON.stringify(seen)); } catch {}
+  };
+  persist();
+
+  // ── Build the queue ──
+  // Each entry: { id, modalId, shouldShow }. Anything in `seen` is filtered
+  // out. shouldShow() handles per-platform skips (e.g. desktop promo is
+  // useless inside the desktop app itself).
+  const isMobile = /Android|iPhone|iPad|iPod|Mobile|Tablet/i.test(navigator.userAgent);
+  const isElectron = !!window.havenDesktop || navigator.userAgent.includes('Electron');
+
+  const allEntries = [
+    {
+      id: 'desktop_app_promo',
+      modalId: 'desktop-promo-modal',
+      shouldShow: () => !isElectron && !isMobile,
+    },
+    {
+      id: 'android_app_promo',
+      modalId: 'android-beta-modal',
+      shouldShow: () => true,
+    },
+  ];
+
+  const queue = allEntries.filter(e => !seen[e.id] && e.shouldShow() && document.getElementById(e.modalId));
+  if (!queue.length) return;
+
+  // ── Sequencer ──
+  let idx = 0;
+  let activeObserver = null;
+
+  const showCurrent = () => {
+    if (idx >= queue.length) return;
+    const entry = queue[idx];
+    const modal = document.getElementById(entry.modalId);
+    if (!modal) { idx++; return showCurrent(); }
+
+    // Inject (or refresh) the queue footer inside the modal card. We append
+    // to the inner card if we can find one — otherwise we fall back to the
+    // modal itself. Idempotent: we remove any previously-injected footer
+    // first so re-opening works cleanly.
+    const card = modal.querySelector('.modal-content, .modal-card, [class*="modal-content"], div') || modal;
+    modal.querySelectorAll('.haven-welcome-queue-footer').forEach(n => n.remove());
+    const remaining = queue.length - idx - 1;
+    const footer = document.createElement('div');
+    footer.className = 'haven-welcome-queue-footer';
+    footer.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border, rgba(255,255,255,0.08));font-size:12px;color:var(--text-muted, #888);';
+    const isLast = remaining === 0;
+    footer.innerHTML = `
+      <span class="haven-welcome-queue-pos">${idx + 1} of ${queue.length}</span>
+      <span style="display:flex;align-items:center;gap:8px;">
+        ${queue.length > 1 && !isLast ? `<button type="button" class="haven-welcome-queue-skip" style="background:none;border:none;color:var(--text-muted, #888);text-decoration:underline;cursor:pointer;font-size:12px;padding:4px 8px;">Skip all</button>` : ''}
+        <button type="button" class="haven-welcome-queue-next" style="background:var(--accent, #5865f2);color:#fff;border:none;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:12px;font-weight:600;">${isLast ? 'Done' : 'Next'}</button>
+      </span>
+    `;
+    // Find the deepest single-child div to append into; falls back gracefully
+    let host = modal.firstElementChild;
+    while (host && host.children && host.children.length === 1 && host.firstElementChild.tagName === 'DIV') {
+      host = host.firstElementChild;
     }
-  });
+    (host || card).appendChild(footer);
+
+    footer.querySelector('.haven-welcome-queue-next').addEventListener('click', () => {
+      modal.style.display = 'none';
+    });
+    const skipBtn = footer.querySelector('.haven-welcome-queue-skip');
+    if (skipBtn) {
+      skipBtn.addEventListener('click', () => {
+        // Mark everything still in the queue as seen, then close.
+        for (let i = idx; i < queue.length; i++) seen[queue[i].id] = 1;
+        persist();
+        idx = queue.length; // force terminate
+        modal.style.display = 'none';
+      });
+    }
+
+    // Show, then watch for close. Any close path (our footer, the modal's
+    // own Maybe Later / Install / overlay click) hides the modal; we react
+    // to display going from flex back to none/empty and advance.
+    modal.style.display = 'flex';
+
+    if (activeObserver) { try { activeObserver.disconnect(); } catch {} activeObserver = null; }
+    activeObserver = new MutationObserver(() => {
+      const d = modal.style.display;
+      if (d === 'none' || d === '') {
+        try { activeObserver.disconnect(); } catch {}
+        activeObserver = null;
+        // Always mark the current entry seen on close (the user has now
+        // been shown it; we don't want to nag them every reload). New ids
+        // added in future versions are not affected.
+        seen[entry.id] = 1;
+        persist();
+        idx++;
+        // Tiny delay so the close animation / focus shift completes before
+        // the next one opens — feels less jarring than back-to-back flashes.
+        setTimeout(showCurrent, 350);
+      }
+    });
+    activeObserver.observe(modal, { attributes: true, attributeFilter: ['style'] });
+  };
+
+  // Defer initial show so the app shell finishes painting first.
+  setTimeout(showCurrent, 1200);
 },
 
 async _setupDesktopShortcuts() {
