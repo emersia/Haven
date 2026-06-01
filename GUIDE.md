@@ -746,6 +746,8 @@ Click the **🔐** button in the DM header to view your **safety number** — a 
 
 Haven has a built-in bot API powered by webhooks. Bots can send messages, delete messages, play soundboard sounds, and register custom slash commands.
 
+> **Looking for ready-made bots and webhooks?** The community library at [**ancsemi/haven-community**](https://github.com/ancsemi/haven-community) collects user-contributed integrations you can deploy as-is — a GitHub releases poster, etc. PRs welcome there if you've built one of your own. See its [`CONTRIBUTING.md`](https://github.com/ancsemi/haven-community/blob/main/CONTRIBUTING.md) for how to submit.
+
 ### Creating a Bot
 
 1. Go to **Settings → Server Admin Settings → Bots** (or open a channel's settings and look for the webhook/bot option)
