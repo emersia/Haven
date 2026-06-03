@@ -27,7 +27,7 @@ async _joinVoice() {
     this._showToast(t('voice.disabled'), 'error');
     return;
   }
-  if (!this.user?.isAdmin && !this._hasPerm('use_voice')) {
+  if (!this.user?.isAdmin && !this.user?.isGuest && !this._hasPerm('use_voice')) {
     this._showToast('You do not have permission to use voice', 'error');
     return;
   }

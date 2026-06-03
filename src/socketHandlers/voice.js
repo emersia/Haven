@@ -57,7 +57,7 @@ module.exports = function register(socket, ctx) {
       socket.emit('voice-channel-gone', { code });
       return;
     }
-    if (!socket.user.isAdmin && !userHasPermission(socket.user.id, 'use_voice', vch.id)) {
+    if (!socket.user.isAdmin && !socket.user.isGuest && !userHasPermission(socket.user.id, 'use_voice', vch.id)) {
       return socket.emit('error-msg', 'You don\'t have permission to use voice chat');
     }
     if (vchSettings && vchSettings.voice_user_limit > 0) {

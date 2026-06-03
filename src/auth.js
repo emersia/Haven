@@ -288,11 +288,22 @@ router.post('/guest-login', authLimiter, async (req, res) => {
     const userId = result.lastInsertRowid;
 
     // Auto-join the admin-whitelisted guest channels.
+    // If a parent channel is selected, also include its public sub-channels
+    // so guests can actually open the nested rooms under that parent.
     try {
       const chRow = db.prepare("SELECT value FROM server_settings WHERE key = 'guest_channels'").get();
       const csv = (chRow && typeof chRow.value === 'string') ? chRow.value.trim() : '';
       if (csv) {
-        const ids = csv.split(',').map(s => parseInt(s.trim())).filter(n => Number.isInteger(n) && n > 0);
+        const seedIds = csv.split(',').map(s => parseInt(s.trim())).filter(n => Number.isInteger(n) && n > 0);
+        const ids = new Set(seedIds);
+        const parentRows = db.prepare('SELECT id FROM channels WHERE parent_channel_id IS NULL').all();
+        const parentSet = new Set(parentRows.map(r => r.id));
+        const subStmt = db.prepare('SELECT id FROM channels WHERE parent_channel_id = ? AND is_private = 0 AND is_dm = 0');
+        for (const cid of seedIds) {
+          if (!parentSet.has(cid)) continue;
+          const subs = subStmt.all(cid);
+          for (const sub of subs) ids.add(sub.id);
+        }
         const insertMember = db.prepare('INSERT OR IGNORE INTO channel_members (channel_id, user_id) VALUES (?, ?)');
         for (const cid of ids) {
           // Never auto-join DM channels even if a stale id sneaks in.

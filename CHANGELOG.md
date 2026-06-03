@@ -24,6 +24,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/). Haven uses [Sema
 
 ### Fixed
 - **Android beta popup silently re-appeared on upgrade.** The `_ab_v3_migrated` block that the v3 release used to wipe stale beta dismissals was still active on every load and would re-show the modal to anyone who'd previously dismissed it. Removed in favor of the new welcome-popup migration path, which only ever sets, never clears.
+- **Guest mode: selecting a parent channel no longer strands its sub-channels (#5401).** Guest auto-join now expands selected parent channels to include their public sub-channels, so guests can open nested rooms under allowed parents without manual extra joins.
+- **Guest mode: voice chat works for guests in allowed channels (#5401).** Guest sessions are now exempt from the `use_voice` role gate (client and server) while still respecting per-channel `voice_enabled` toggles and membership checks.
 
 
 
