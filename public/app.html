@@ -2622,6 +2622,12 @@
         <input type="file" id="sticker-file-input" accept="image/png,image/gif,image/webp,image/jpeg" style="max-width:120px;font-size:11px">
         <button class="btn-sm btn-accent" id="sticker-upload-btn" data-i18n="modals.sticker_mgmt.upload_btn">Upload</button>
       </div>
+      <div style="margin-top:6px;text-align:center">
+        <label class="btn-sm" style="cursor:pointer;display:inline-block" title="Select multiple images - names auto-generated from filenames; optional pack applies to all">
+          📦 Bulk Upload
+          <input type="file" id="sticker-bulk-input" accept="image/png,image/gif,image/webp,image/jpeg" multiple style="display:none">
+        </label>
+      </div>
       <div id="stickers-list" style="margin-top:12px;">
         <p class="muted-text" data-i18n="modals.sticker_mgmt.no_stickers">No stickers uploaded</p>
       </div>

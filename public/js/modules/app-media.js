@@ -1395,6 +1395,7 @@ _setupStickerManagement() {
   const modal = document.getElementById('sticker-modal');
   const closeBtn = document.getElementById('close-sticker-modal-btn');
   const uploadBtn = document.getElementById('sticker-upload-btn');
+  const bulkInput = document.getElementById('sticker-bulk-input');
   const fileInput = document.getElementById('sticker-file-input');
   const nameInput = document.getElementById('sticker-name-input');
   const packInput = document.getElementById('sticker-pack-input');
@@ -1442,6 +1443,57 @@ _setupStickerManagement() {
       } catch {
         this._showToast('Upload failed', 'error');
       }
+    });
+  }
+
+  if (bulkInput) {
+    bulkInput.addEventListener('change', async () => {
+      const files = Array.from(bulkInput.files || []);
+      if (!files.length) return;
+
+      const maxKb = parseInt(this.serverSettings?.max_sticker_kb) || 1024;
+      const formData = new FormData();
+      let skipped = 0;
+      for (const file of files) {
+        if (file.size > maxKb * 1024) {
+          skipped++;
+          continue;
+        }
+        formData.append('stickers', file, file.name);
+      }
+      if ([...formData.entries()].length === 0) {
+        bulkInput.value = '';
+        return this._showToast(`All files exceeded the ${maxKb} KB limit`, 'error');
+      }
+
+      const pack = (packInput?.value || '').trim();
+      if (pack) formData.append('pack_name', pack);
+
+      try {
+        this._showToast(`Uploading ${files.length - skipped} sticker${files.length - skipped !== 1 ? 's' : ''}...`, 'info');
+        const res = await fetch('/api/upload-stickers', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${this.token}` },
+          body: formData
+        });
+        if (!res.ok) {
+          let errMsg = `Upload failed (${res.status})`;
+          try { const d = await res.json(); errMsg = d.error || errMsg; } catch {}
+          return this._showToast(errMsg, 'error');
+        }
+
+        const data = await res.json();
+        const count = data.uploaded?.length || 0;
+        const errCount = (data.errors?.length || 0) + skipped;
+        let msg = `${count} sticker${count !== 1 ? 's' : ''} uploaded`;
+        if (errCount) msg += ` (${errCount} skipped)`;
+        this._showToast(msg, count ? 'success' : 'error');
+        this._loadStickers();
+      } catch {
+        this._showToast('Bulk upload failed', 'error');
+      }
+
+      bulkInput.value = '';
     });
   }
 

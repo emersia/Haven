@@ -1605,6 +1605,42 @@ app.post('/api/upload-sticker', uploadLimiter, (req, res) => {
   });
 });
 
+app.post('/api/upload-stickers', uploadLimiter, (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  const user = token ? verifyToken(token) : null;
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+  if (!verifyAdminFromDb(user) && !userHasPermission(user.id, 'manage_stickers') && !userHasPermission(user.id, 'manage_emojis')) return res.status(403).json({ error: 'Requires admin or Manage Stickers permission' });
+
+  createStickerUpload().array('stickers', 50)(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message });
+    if (!req.files || req.files.length === 0) return res.status(400).json({ error: 'No files uploaded' });
+
+    let pack = (req.body.pack_name || '').trim().slice(0, 40);
+    if (!pack) pack = 'General';
+
+    const { getDb } = require('./src/database');
+    const db = getDb();
+    const results = [];
+    const errors = [];
+    const insert = db.prepare('INSERT OR REPLACE INTO stickers (name, pack_name, filename, uploaded_by) VALUES (?, ?, ?, ?)');
+
+    for (const file of req.files) {
+      let name = path.basename(file.originalname, path.extname(file.originalname))
+        .replace(/[^a-zA-Z0-9_-]/g, '').toLowerCase();
+      if (!name) name = path.basename(file.filename, path.extname(file.filename));
+      if (name.length > 40) name = name.slice(0, 40);
+      try {
+        insert.run(name, pack, file.filename, user.id);
+        results.push({ name, pack_name: pack, url: `/uploads/stickers/${file.filename}` });
+      } catch (e) {
+        errors.push({ name, error: e.message });
+      }
+    }
+
+    res.json({ uploaded: results, errors });
+  });
+});
+
 app.get('/api/stickers', (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   const user = token ? verifyToken(token) : null;
