@@ -1,6 +1,6 @@
-export default {
+﻿export default {
 
-// ── Image Queue (paste/drop → preview → send on Enter) ──
+// â”€â”€ Image Queue (paste/drop â†’ preview â†’ send on Enter) â”€â”€
 
 _queueImage(file) {
   if (!file || !file.type.startsWith('image/')) return;
@@ -37,7 +37,7 @@ _renderImageQueue() {
     const removeBtn = document.createElement('button');
     removeBtn.className = 'image-queue-remove';
     removeBtn.title = 'Remove';
-    removeBtn.textContent = '×';
+    removeBtn.textContent = 'Ã—';
     removeBtn.addEventListener('click', () => {
       this._imageQueue.splice(idx, 1);
       this._renderImageQueue();
@@ -70,7 +70,7 @@ async _flushImageQueue(bundled = false, personaPrefix = '') {
   }
 },
 
-// ── PiP DM Image Queue (#5324) ──────────────────────────
+// â”€â”€ PiP DM Image Queue (#5324) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 _queueImageForPiP(file, targetCode) {
   if (!file || !file.type.startsWith('image/')) return;
@@ -109,7 +109,7 @@ _renderPiPImageQueue() {
     const removeBtn = document.createElement('button');
     removeBtn.className = 'image-queue-remove';
     removeBtn.title = 'Remove';
-    removeBtn.textContent = '×';
+    removeBtn.textContent = 'Ã—';
     removeBtn.addEventListener('click', () => {
       this._pipImageQueue.splice(idx, 1);
       this._renderPiPImageQueue();
@@ -142,9 +142,9 @@ async _flushPiPImageQueue(bundled = false) {
   }
 },
 
-// ═══════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // AVATAR / PFP CUSTOMIZER
-// ═══════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 _updateAvatarPreview() {
   const preview = document.getElementById('avatar-upload-preview');
@@ -163,7 +163,7 @@ _setupAvatarUpload() {
   if (this._avatarDelegationActive) return;
   this._avatarDelegationActive = true;
 
-  // Pending state — nothing is saved until the user clicks Save
+  // Pending state â€” nothing is saved until the user clicks Save
   this._pendingAvatarFile = null;       // raw File object from <input>
   this._pendingAvatarPreviewUrl = null; // local preview data URL (display only)
   this._pendingAvatarRemoved = false;   // user clicked Clear
@@ -179,7 +179,7 @@ _setupAvatarUpload() {
     });
   }
 
-  // ── Delegated click handler ──
+  // â”€â”€ Delegated click handler â”€â”€
   document.addEventListener('click', (e) => {
     // Shape buttons
     const shapeBtn = e.target.closest('.avatar-shape-btn');
@@ -193,7 +193,7 @@ _setupAvatarUpload() {
       return;
     }
 
-    // Upload button → trigger file picker
+    // Upload button â†’ trigger file picker
     if (e.target.closest('#avatar-upload-btn')) {
       e.preventDefault();
       e.stopPropagation();
@@ -226,7 +226,7 @@ _setupAvatarUpload() {
     }
   });
 
-  // File input change → stage the file, show local preview
+  // File input change â†’ stage the file, show local preview
   document.addEventListener('change', (e) => {
     if (e.target && e.target.id === 'avatar-file-input') {
       const file = e.target.files[0];
@@ -339,13 +339,13 @@ async _commitAvatarSettings() {
       if (this.socket) this.socket.emit('set-avatar-shape', { shape: this._pendingAvatarShape });
     }
 
-    if (status) { status.textContent = '✅ Saved!'; status.style.color = 'var(--success, #6f6)'; }
+    if (status) { status.textContent = 'âœ… Saved!'; status.style.color = 'var(--success, #6f6)'; }
     this._showToast('Avatar settings saved!', 'success');
     setTimeout(() => { if (status) status.textContent = ''; }, 3000);
 
   } catch (err) {
     console.error('[Avatar] Save failed:', err);
-    if (status) { status.textContent = '❌ ' + err.message; status.style.color = 'var(--danger, red)'; }
+    if (status) { status.textContent = 'âŒ ' + err.message; status.style.color = 'var(--danger, red)'; }
     this._showToast('Failed to save: ' + err.message, 'error');
   }
 },
@@ -355,15 +355,21 @@ _applyAvatarShape() {
   // This function is kept as a safe stub in case it's called elsewhere.
 },
 
-// ═══════════════════════════════════════════════════════
-// SOUND MANAGER (Full Popout — Admin + User)
-// ═══════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// SOUND MANAGER (Full Popout â€” Admin + User)
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 _setupSoundManagement() {
   this.customSounds = [];
   this._soundHotkeys = JSON.parse(localStorage.getItem('haven_sound_hotkeys') || '{}'); // { hotkey: soundName }
   this._recordingHotkeyFor = null; // soundName currently recording hotkey
-  this._soundCooldowns = {};       // hotkey → timestamp to prevent key-repeat spam
+  this._soundCooldowns = {};       // hotkey
+
+  this._soundPrefs = {}; // { soundName: { hidden, customOrder } }
+  this._showHiddenSounds = false;
+  this._soundboardSidebarMode = localStorage.getItem('haven_soundboard_sidebar_mode') === 'true';
+  this._loadUserSoundPrefs();
+ â†’ timestamp to prevent key-repeat spam
 
   // Open from admin "Manage Sounds" button
   const openBtn = document.getElementById('open-sound-manager-btn');
@@ -433,6 +439,43 @@ _setupSoundManagement() {
       }
     });
   }
+
+  
+  // Show/hide hidden sounds toggle
+  const showHiddenCheckbox = document.getElementById('soundboard-show-hidden');
+  if (showHiddenCheckbox) {
+    showHiddenCheckbox.addEventListener('change', (e) => {
+      this._showHiddenSounds = e.target.checked;
+      this._renderSoundboard(
+        this._soundboardPip
+          ? (document.getElementById('sb-pip-search')?.value?.trim() || '')
+          : (document.getElementById('soundboard-search')?.value?.trim() || '')
+      );
+    });
+  }
+
+  // Sidebar layout toggle
+  const sidebarCheckbox = document.getElementById('soundboard-sidebar-mode');
+  if (sidebarCheckbox) {
+    sidebarCheckbox.checked = this._soundboardSidebarMode;
+    sidebarCheckbox.addEventListener('change', (e) => {
+      this._soundboardSidebarMode = e.target.checked;
+      localStorage.setItem('haven_soundboard_sidebar_mode', this._soundboardSidebarMode ? 'true' : 'false');
+      this._renderSoundboard(
+        this._soundboardPip
+          ? (document.getElementById('sb-pip-search')?.value?.trim() || '')
+          : (document.getElementById('soundboard-search')?.value?.trim() || '')
+      );
+      const grids = [document.getElementById('soundboard-grid'), document.getElementById('sb-pip-grid')];
+      grids.forEach(g => {
+        if (g) {
+          if (this._soundboardSidebarMode) g.classList.add('sidebar-mode');
+          else g.classList.remove('sidebar-mode');
+        }
+      });
+    });
+  }
+
 
   // Soundboard search
   const searchInput = document.getElementById('soundboard-search');
@@ -633,7 +676,7 @@ _updateSoundSelects(sounds) {
 
     if (builtins.length > 0) {
       const builtinGroup = document.createElement('optgroup');
-      builtinGroup.label = `🎙️ ${t('modals.sound_manager.group_builtin')}`;
+      builtinGroup.label = `ðŸŽ™ï¸ ${t('modals.sound_manager.group_builtin')}`;
       builtinGroup.dataset.customGroup = '1';
       builtins.forEach(s => {
         const opt = document.createElement('option');
@@ -648,7 +691,7 @@ _updateSoundSelects(sounds) {
 
     if (customs.length > 0) {
       const customGroup = document.createElement('optgroup');
-      customGroup.label = `🎵 ${t('modals.sound_manager.group_custom')}`;
+      customGroup.label = `ðŸŽµ ${t('modals.sound_manager.group_custom')}`;
       customGroup.dataset.customGroup = '1';
       customs.forEach(s => {
         const opt = document.createElement('option');
@@ -683,8 +726,8 @@ _renderSoundList(sounds) {
     ${builtins.map(s => `
       <div class="custom-sound-item" data-name="${this._escapeHtml(s.name)}">
         <span class="custom-sound-name">${this._escapeHtml(s.name)}</span>
-        <button class="btn-xs sound-preview-btn" data-url="${this._escapeHtml(s.url)}" title="${t('modals.sound_manager.preview_btn')}">▶</button>
-        <span class="muted-text" style="font-size:0.75em;margin-left:4px" title="${t('modals.sound_manager.builtin_locked_title')}">🔒</span>
+        <button class="btn-xs sound-preview-btn" data-url="${this._escapeHtml(s.url)}" title="${t('modals.sound_manager.preview_btn')}">â–¶</button>
+        <span class="muted-text" style="font-size:0.75em;margin-left:4px" title="${t('modals.sound_manager.builtin_locked_title')}">ðŸ”’</span>
       </div>
     `).join('')}
   `;
@@ -694,9 +737,9 @@ _renderSoundList(sounds) {
     ${custom.map(s => `
       <div class="custom-sound-item" data-name="${this._escapeHtml(s.name)}">
         <span class="custom-sound-name">${this._escapeHtml(s.name)}</span>
-        <button class="btn-xs sound-preview-btn" data-url="${this._escapeHtml(s.url)}" title="${t('modals.sound_manager.preview_btn')}">▶</button>
-        <button class="btn-xs sound-rename-btn" data-name="${this._escapeHtml(s.name)}" title="${t('modals.sound_manager.rename_btn')}">✏️</button>
-        <button class="btn-xs sound-delete-btn" data-name="${this._escapeHtml(s.name)}" title="${t('modals.sound_manager.delete_btn')}">🗑️</button>
+        <button class="btn-xs sound-preview-btn" data-url="${this._escapeHtml(s.url)}" title="${t('modals.sound_manager.preview_btn')}">â–¶</button>
+        <button class="btn-xs sound-rename-btn" data-name="${this._escapeHtml(s.name)}" title="${t('modals.sound_manager.rename_btn')}">âœï¸</button>
+        <button class="btn-xs sound-delete-btn" data-name="${this._escapeHtml(s.name)}" title="${t('modals.sound_manager.delete_btn')}">ðŸ—‘ï¸</button>
       </div>
     `).join('')}
   `;
@@ -797,7 +840,7 @@ _renderSoundList(sounds) {
   });
 },
 
-// ── Soundboard Tab ─────────────────────────────────────
+// â”€â”€ Soundboard Tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 _renderSoundboard(filter = '') {
   // Render into both the modal grid and the PiP grid if it's open
@@ -808,11 +851,11 @@ _renderSoundboard(filter = '') {
   if (pipGrid) grids.push(pipGrid);
   if (grids.length === 0) return;
 
-  const sounds = (this.customSounds || []).filter(s =>
+  let sounds = (this.customSounds || []).filter(s =>
     !filter || s.name.toLowerCase().includes(filter.toLowerCase())
   );
 
-  // Reverse lookup: soundName → hotkey
+  // Reverse lookup: soundName â†’ hotkey
   const hotkeyMap = {};
   Object.entries(this._soundHotkeys).forEach(([hk, name]) => { hotkeyMap[name] = hk; });
 
@@ -826,8 +869,7 @@ _renderSoundboard(filter = '') {
                <span class="sb-hotkey-clear" data-sound="${this._escapeHtml(s.name)}" title="Remove hotkey">&times;</span>
              </span>`
           : `<span class="sb-hotkey-set" data-sound="${this._escapeHtml(s.name)}">Set hotkey</span>`;
-        return `<button class="soundboard-btn" data-name="${this._escapeHtml(s.name)}" data-url="${this._escapeHtml(s.url)}">
-          <span class="sb-name">${this._escapeHtml(s.name)}</span>
+        return `<button class="soundboard-btn `${this._soundPrefs[s.name]?.hidden ? ` hidden-sound` : ``}" data-name="${this._escapeHtml(s.name)}" data-url="${this._escapeHtml(s.url)}"><span class="sb-hide-btn" data-sound="${this._escapeHtml(s.name)}" title="${this._soundPrefs[s.name]?.hidden ? `Show` : `Hide`} this sound">👁️</span><span class="sb-name">${this._escapeHtml(s.name)}</span>
           ${hotkeyHtml}
         </button>`;
       }).join('');
@@ -835,6 +877,10 @@ _renderSoundboard(filter = '') {
   grids.forEach(grid => {
     grid.innerHTML = html;
     if (sounds.length === 0) return;
+
+    // Apply sidebar mode class
+    if (this._soundboardSidebarMode) grid.classList.add('sidebar-mode');
+    else grid.classList.remove('sidebar-mode');
 
     // Click the main button area to play
     grid.querySelectorAll('.soundboard-btn').forEach(btn => {
@@ -856,7 +902,7 @@ _renderSoundboard(filter = '') {
       });
     });
 
-    // "×" remove hotkey button
+    // "Ã—" remove hotkey button
     grid.querySelectorAll('.sb-hotkey-clear').forEach(el => {
       el.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -889,7 +935,7 @@ _renderSoundboard(filter = '') {
   });
 },
 
-// ── Assign to Events Tab ───────────────────────────────
+// â”€â”€ Assign to Events Tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 _renderAssignTab() {
   const builtinSounds = [
@@ -920,7 +966,7 @@ _renderAssignTab() {
     // Build options
     sel.innerHTML = '';
     const builtinGroup = document.createElement('optgroup');
-    builtinGroup.label = '🔊 Built-in';
+    builtinGroup.label = 'ðŸ”Š Built-in';
     builtinSounds.forEach(s => {
       const opt = document.createElement('option');
       opt.value = s.value;
@@ -931,7 +977,7 @@ _renderAssignTab() {
 
     if (fileBuiltins.length > 0) {
       const fbGroup = document.createElement('optgroup');
-      fbGroup.label = '🎙️ Sounds';
+      fbGroup.label = 'ðŸŽ™ï¸ Sounds';
       fileBuiltins.forEach(s => {
         const opt = document.createElement('option');
         opt.value = s.value;
@@ -944,7 +990,7 @@ _renderAssignTab() {
 
     if (userCustoms.length > 0) {
       const customGroup = document.createElement('optgroup');
-      customGroup.label = '🎵 Custom';
+      customGroup.label = 'ðŸŽµ Custom';
       userCustoms.forEach(s => {
         const opt = document.createElement('option');
         opt.value = s.value;
@@ -971,9 +1017,9 @@ _renderAssignTab() {
   });
 },
 
-// ═══════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // CUSTOM EMOJI MANAGEMENT
-// ═══════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 _setupEmojiManagement() {
   this._croppedEmojiBlob = null;
@@ -1055,7 +1101,7 @@ _setupEmojiManagement() {
     }
   });
 
-  // Bulk emoji upload — select multiple files, auto-named from filenames
+  // Bulk emoji upload â€” select multiple files, auto-named from filenames
   const bulkInput = document.getElementById('emoji-bulk-input');
   if (bulkInput) {
     bulkInput.addEventListener('change', async () => {
@@ -1121,7 +1167,7 @@ _setupEmojiCropperEvents() {
     this._renderEmojiCropFrame();
   });
 
-  // Mouse wheel → zoom
+  // Mouse wheel â†’ zoom
   canvas.addEventListener('wheel', (e) => {
     e.preventDefault();
     if (!this._cropState) return;
@@ -1302,7 +1348,7 @@ _renderEmojiList(emojis) {
     <div class="custom-sound-item">
       <img src="${this._escapeHtml(e.url)}" alt=":${this._escapeHtml(e.name)}:" class="custom-emoji-preview" style="width:24px;height:24px;vertical-align:middle;margin-right:6px;">
       <span class="custom-sound-name">:${this._escapeHtml(e.name)}:</span>
-      <button class="btn-xs emoji-delete-btn" data-name="${this._escapeHtml(e.name)}" title="Delete">🗑️</button>
+      <button class="btn-xs emoji-delete-btn" data-name="${this._escapeHtml(e.name)}" title="Delete">ðŸ—‘ï¸</button>
     </div>
   `).join('');
 
@@ -1327,9 +1373,9 @@ _renderEmojiList(emojis) {
   });
 },
 
-// ═══════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // STICKERS (admin upload, anyone can send)
-// ═══════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 async _loadStickers() {
   try {
@@ -1363,7 +1409,7 @@ _renderStickerList(stickers) {
         <div class="custom-sound-item">
           <img src="${this._escapeHtml(s.url)}" alt=":${this._escapeHtml(s.name)}:" style="width:48px;height:48px;vertical-align:middle;margin-right:8px;object-fit:contain;border-radius:4px;background:var(--bg-secondary)">
           <span class="custom-sound-name">:${this._escapeHtml(s.name)}:</span>
-          <button class="btn-xs sticker-delete-btn" data-name="${this._escapeHtml(s.name)}" title="Delete">🗑️</button>
+          <button class="btn-xs sticker-delete-btn" data-name="${this._escapeHtml(s.name)}" title="Delete">ðŸ—‘ï¸</button>
         </div>
       `).join('')}
     </div>
@@ -1500,9 +1546,9 @@ _setupStickerManagement() {
   this._loadStickers();
 },
 
-// ═══════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // WEBHOOKS / BOT MANAGEMENT
-// ═══════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 _setupWebhookManagement() {
   // Open bot management modal
@@ -1546,7 +1592,7 @@ _renderBotSidebar(webhooks) {
   sidebar.innerHTML = webhooks.map(wh => {
     const avatarHtml = wh.avatar_url
       ? `<img src="${this._escapeHtml(wh.avatar_url)}" style="width:20px;height:20px;border-radius:50%;object-fit:cover;flex-shrink:0">`
-      : `<span style="width:20px;height:20px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;color:#fff">🤖</span>`;
+      : `<span style="width:20px;height:20px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;color:#fff">ðŸ¤–</span>`;
     const activeClass = this._selectedBotId === wh.id ? ' active' : '';
     return `<div class="role-sidebar-item${activeClass}" data-bot-id="${wh.id}">${avatarHtml}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${this._escapeHtml(wh.name)}</span></div>`;
   }).join('');
@@ -1569,7 +1615,7 @@ _showBotDetail(botId) {
   const panel = document.getElementById('bot-detail-panel');
   const baseUrl = window.location.origin;
   const webhookUrl = `${baseUrl}/api/webhooks/${wh.token}`;
-  const maskedToken = wh.token.slice(0, 12) + '••••••••••••';
+  const maskedToken = wh.token.slice(0, 12) + 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢';
   const channelOptions = this._getBotChannelOptions(wh.channel_id);
 
   panel.innerHTML = `
@@ -1577,10 +1623,10 @@ _showBotDetail(botId) {
       <label class="settings-label">${t('modals.bot_mgmt.avatar_label')}</label>
       <div class="bot-avatar-row" style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
         <div class="bot-avatar-preview" style="width:48px;height:48px;border-radius:50%;overflow:hidden;border:2px solid var(--border);background:var(--bg-tertiary);flex-shrink:0;display:flex;align-items:center;justify-content:center">
-          ${wh.avatar_url ? `<img src="${this._escapeHtml(wh.avatar_url)}" style="width:100%;height:100%;object-fit:cover">` : '<span style="font-size:24px">🤖</span>'}
+          ${wh.avatar_url ? `<img src="${this._escapeHtml(wh.avatar_url)}" style="width:100%;height:100%;object-fit:cover">` : '<span style="font-size:24px">ðŸ¤–</span>'}
         </div>
         <div style="display:flex;flex-direction:column;gap:4px">
-          <button class="btn-xs btn-accent" id="bot-upload-avatar-btn">📷 ${t('modals.bot_mgmt.upload_avatar_btn')}</button>
+          <button class="btn-xs btn-accent" id="bot-upload-avatar-btn">ðŸ“· ${t('modals.bot_mgmt.upload_avatar_btn')}</button>
           <button class="btn-xs" id="bot-remove-avatar-btn" ${wh.avatar_url ? '' : 'disabled'}>${t('modals.bot_mgmt.remove_avatar_btn')}</button>
         </div>
         <input type="file" id="bot-avatar-file-input" accept="image/png,image/jpeg,image/gif,image/webp" style="display:none">
@@ -1594,34 +1640,34 @@ _showBotDetail(botId) {
 
       <label class="settings-label">${t('modals.bot_mgmt.status_label')}</label>
       <label class="toggle-row" style="margin-bottom:8px">
-        <span>${wh.is_active ? `🟢 ${t('modals.bot_mgmt.status_active')}` : `🔴 ${t('modals.bot_mgmt.status_disabled')}`}</span>
+        <span>${wh.is_active ? `ðŸŸ¢ ${t('modals.bot_mgmt.status_active')}` : `ðŸ”´ ${t('modals.bot_mgmt.status_disabled')}`}</span>
         <button class="btn-xs" id="bot-detail-toggle">${wh.is_active ? t('modals.bot_mgmt.disable_btn') : t('modals.bot_mgmt.enable_btn')}</button>
       </label>
 
       <label class="settings-label">${t('modals.bot_mgmt.webhook_url_label')}</label>
       <div style="display:flex;gap:4px;align-items:center;margin-bottom:8px">
         <code style="flex:1;font-size:11px;padding:6px 8px;background:var(--bg-input);border-radius:4px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${this._escapeHtml(webhookUrl)}</code>
-        <button class="btn-xs" id="bot-detail-copy-url" title="${t('modals.bot_mgmt.copy_url_title')}">📋</button>
+        <button class="btn-xs" id="bot-detail-copy-url" title="${t('modals.bot_mgmt.copy_url_title')}">ðŸ“‹</button>
       </div>
 
       <label class="settings-label">${t('modals.bot_mgmt.token_label')}</label>
       <div style="font-size:11px;font-family:monospace;padding:4px 8px;background:var(--bg-input);border-radius:4px;color:var(--text-muted);margin-bottom:12px">${maskedToken}</div>
 
-      <label class="settings-label">📡 Callback URL <span style="font-size:10px;color:var(--text-muted)">(optional — Haven will POST messages to this URL)</span></label>
+      <label class="settings-label">ðŸ“¡ Callback URL <span style="font-size:10px;color:var(--text-muted)">(optional â€” Haven will POST messages to this URL)</span></label>
       <input type="url" id="bot-detail-callback-url" value="${this._escapeHtml(wh.callback_url || '')}" placeholder="https://mybot.example.com/haven-events" class="settings-text-input" style="width:100%;margin-bottom:8px">
 
-      <label class="settings-label">🔑 Callback Secret <span style="font-size:10px;color:var(--text-muted)">(optional — used to sign payloads via X-Haven-Signature)</span></label>
+      <label class="settings-label">ðŸ”‘ Callback Secret <span style="font-size:10px;color:var(--text-muted)">(optional â€” used to sign payloads via X-Haven-Signature)</span></label>
       <input type="text" id="bot-detail-callback-secret" value="${this._escapeHtml(wh.callback_secret || '')}" placeholder="my-secret-key" class="settings-text-input" style="width:100%;margin-bottom:12px">
 
-      <label class="settings-label">🛡️ Moderation <span style="font-size:10px;color:var(--text-muted)">(admin only — let this bot kick / ban / mute users via REST API)</span></label>
+      <label class="settings-label">ðŸ›¡ï¸ Moderation <span style="font-size:10px;color:var(--text-muted)">(admin only â€” let this bot kick / ban / mute users via REST API)</span></label>
       <label class="toggle-row" style="margin-bottom:12px">
         <input type="checkbox" id="bot-detail-can-moderate" ${wh.can_moderate ? 'checked' : ''} ${this.user && this.user.isAdmin ? '' : 'disabled'}>
         <span>Allow this bot to perform moderation actions</span>
       </label>
 
       <div style="display:flex;gap:8px;margin-top:8px">
-        <button class="btn-sm btn-accent" id="bot-detail-save" style="flex:1">💾 ${t('modals.bot_mgmt.save_btn')}</button>
-        <button class="btn-sm btn-danger" id="bot-detail-delete">🗑️ ${t('modals.bot_mgmt.delete_btn')}</button>
+        <button class="btn-sm btn-accent" id="bot-detail-save" style="flex:1">ðŸ’¾ ${t('modals.bot_mgmt.save_btn')}</button>
+        <button class="btn-sm btn-danger" id="bot-detail-delete">ðŸ—‘ï¸ ${t('modals.bot_mgmt.delete_btn')}</button>
       </div>
     </div>
   `;
@@ -1654,10 +1700,10 @@ _showBotDetail(botId) {
   });
   panel.querySelector('#bot-detail-copy-url').addEventListener('click', () => {
     const markCopied = () => {
-      panel.querySelector('#bot-detail-copy-url').textContent = '✅';
+      panel.querySelector('#bot-detail-copy-url').textContent = 'âœ…';
       setTimeout(() => {
         const btn = panel.querySelector('#bot-detail-copy-url');
-        if (btn) btn.textContent = '📋';
+        if (btn) btn.textContent = 'ðŸ“‹';
       }, 1500);
     };
     navigator.clipboard.writeText(webhookUrl).then(markCopied).catch(() => {
@@ -1697,7 +1743,7 @@ _getBotChannelOptions(selectedId) {
     const subs = subMap[p.id] || [];
     for (const s of subs) {
       const sSel = s.id === selectedId ? ' selected' : '';
-      html += `<option value="${s.id}"${sSel}>&nbsp;&nbsp;&nbsp;&nbsp;↳ ${this._escapeHtml(s.name)}</option>`;
+      html += `<option value="${s.id}"${sSel}>&nbsp;&nbsp;&nbsp;&nbsp;â†³ ${this._escapeHtml(s.name)}</option>`;
     }
   }
   return html;
@@ -1725,9 +1771,9 @@ async _uploadBotAvatar(botId, file) {
   }
 },
 
-// ═══════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // LAYOUT DENSITY
-// ═══════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 _setupDensityPicker() {
   const picker = document.getElementById('density-picker');
@@ -1751,7 +1797,7 @@ _setupDensityPicker() {
   });
 },
 
-// ── Font Size Picker ──
+// â”€â”€ Font Size Picker â”€â”€
 
 _setupFontSizePicker() {
   const picker = document.getElementById('font-size-picker');
@@ -1774,7 +1820,7 @@ _setupFontSizePicker() {
   });
 },
 
-// ── Emoji Reaction Size Picker ──
+// â”€â”€ Emoji Reaction Size Picker â”€â”€
 
 _setupEmojiSizePicker() {
   const picker = document.getElementById('emoji-size-picker');
@@ -1797,7 +1843,7 @@ _setupEmojiSizePicker() {
   });
 },
 
-// ── Debug Section ──
+// â”€â”€ Debug Section â”€â”€
 
 _setupDebugSection() {
   const cb = document.getElementById('pref-debug-local-talk-indicator');
@@ -1810,7 +1856,7 @@ _setupDebugSection() {
     } catch {}
   });
 
-  // #5379 — opt-in toggle to re-apply voice processing (echoCancellation /
+  // #5379 â€” opt-in toggle to re-apply voice processing (echoCancellation /
   // noiseSuppression / autoGainControl) to getDisplayMedia audio. Default
   // off as of 3.17.3 because those filters hollow out music and game audio
   // for listeners. Users sharing tutorial narration or meeting audio can
@@ -1827,7 +1873,7 @@ _setupDebugSection() {
     });
   }
 
-  // #5380 — always join voice muted
+  // #5380 â€” always join voice muted
   const moCb = document.getElementById('pref-voice-mute-on-join');
   if (moCb) {
     try { moCb.checked = localStorage.getItem('haven_mute_on_join') === '1'; } catch {}
@@ -1839,7 +1885,7 @@ _setupDebugSection() {
     });
   }
 
-  // #5380 — listener-only (skip mic) voice mode
+  // #5380 â€” listener-only (skip mic) voice mode
   const loCb = document.getElementById('pref-voice-listener-only');
   if (loCb) {
     try { loCb.checked = localStorage.getItem('haven_listener_only') === '1'; } catch {}
@@ -1852,7 +1898,7 @@ _setupDebugSection() {
   }
 },
 
-// ── Image Display Mode Picker ──
+// â”€â”€ Image Display Mode Picker â”€â”€
 
 _setupImageModePicker() {
   const picker = document.getElementById('image-mode-picker');
@@ -1880,7 +1926,7 @@ _applyImageMode(mode) {
   document.body.classList.toggle('image-mode-full', mode === 'full');
 },
 
-// ── Role Display Picker ──
+// â”€â”€ Role Display Picker â”€â”€
 
 _setupRoleDisplayPicker() {
   const picker = document.getElementById('role-display-picker');
@@ -1905,7 +1951,7 @@ _setupRoleDisplayPicker() {
   });
 },
 
-// ── Toolbar Icon Style Picker ──
+// â”€â”€ Toolbar Icon Style Picker â”€â”€
 
 _setupToolbarIconPicker() {
   const picker = document.getElementById('toolbar-icon-picker');
@@ -1977,8 +2023,8 @@ _setupToolbarIconPicker() {
       row.innerHTML = `
         <span class="toolbar-order-item-label">${actionLabels[key] || key}</span>
         <div class="toolbar-order-item-controls">
-          <button type="button" class="toolbar-order-move" data-dir="up" data-key="${key}" ${index === 0 ? 'disabled' : ''} title="Move up">▲</button>
-          <button type="button" class="toolbar-order-move" data-dir="down" data-key="${key}" ${index === currentOrder.length - 1 ? 'disabled' : ''} title="Move down">▼</button>
+          <button type="button" class="toolbar-order-move" data-dir="up" data-key="${key}" ${index === 0 ? 'disabled' : ''} title="Move up">â–²</button>
+          <button type="button" class="toolbar-order-move" data-dir="down" data-key="${key}" ${index === currentOrder.length - 1 ? 'disabled' : ''} title="Move down">â–¼</button>
         </div>
       `;
       orderList.appendChild(row);
@@ -2039,7 +2085,7 @@ _setupToolbarIconPicker() {
   }
 },
 
-// ── Image Lightbox ──
+// â”€â”€ Image Lightbox â”€â”€
 
 _setupLightbox() {
   const lb = document.getElementById('image-lightbox');
@@ -2123,7 +2169,7 @@ _closeLightbox() {
   this._hideImageContextMenu();
 },
 
-/* ── Modal Expand / Maximize ────────────────────────── */
+/* â”€â”€ Modal Expand / Maximize â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 _setupModalExpand() {
   // Global guard: track mousedown origin so overlay click-to-close doesn't fire
@@ -2136,7 +2182,7 @@ _setupModalExpand() {
         _overlayMouseDownTarget && _overlayMouseDownTarget !== e.target) {
       e.stopImmediatePropagation();
     }
-  }, true); // capturing phase — fires before individual handlers
+  }, true); // capturing phase â€” fires before individual handlers
 
   // Auto-inject expand/maximize + close buttons into every modal.
   // Buttons live in an absolutely positioned .modal-controls group at the
@@ -2145,16 +2191,16 @@ _setupModalExpand() {
   const _injectModalControls = () => {
     document.querySelectorAll('.modal').forEach(modal => {
       // Skip promo/centered popups and the media gallery (which has its own
-      // header close button) — they're not regular modals (#5352)
+      // header close button) â€” they're not regular modals (#5352)
       if (modal.classList.contains('android-beta-promo') ||
           modal.classList.contains('desktop-promo') ||
           modal.classList.contains('donors-modal-box') ||
           modal.classList.contains('media-gallery-modal')) return;
-      // Idempotent — skip already-injected
+      // Idempotent â€” skip already-injected
       if (modal.dataset.modalControlsInjected === '1') return;
       modal.dataset.modalControlsInjected = '1';
 
-      // Settings/activities headers have their own close button — keep it
+      // Settings/activities headers have their own close button â€” keep it
       // but inject the expand toggle next to it.
       const settingsClose = modal.querySelector('.settings-close-btn');
 
@@ -2162,11 +2208,11 @@ _setupModalExpand() {
       expandBtn.type = 'button';
       expandBtn.className = 'modal-expand-btn';
       expandBtn.title = 'Expand / Restore';
-      expandBtn.textContent = '⛶';
+      expandBtn.textContent = 'â›¶';
       expandBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         const isMax = modal.classList.toggle('modal-maximized');
-        expandBtn.textContent = isMax ? '⊖' : '⛶';
+        expandBtn.textContent = isMax ? 'âŠ–' : 'â›¶';
         expandBtn.title = isMax ? 'Restore size' : 'Expand';
       });
 
@@ -2186,14 +2232,14 @@ _setupModalExpand() {
         closeBtn.type = 'button';
         closeBtn.className = 'modal-expand-btn';
         closeBtn.title = 'Close';
-        closeBtn.textContent = '✕';
+        closeBtn.textContent = 'âœ•';
         closeBtn.addEventListener('click', (e) => {
           e.stopPropagation();
           const overlay = modal.closest('.modal-overlay');
           if (overlay) overlay.style.display = 'none';
           if (modal.classList.contains('modal-maximized')) {
             modal.classList.remove('modal-maximized');
-            expandBtn.textContent = '⛶';
+            expandBtn.textContent = 'â›¶';
             expandBtn.title = 'Expand / Restore';
           }
         });
@@ -2214,9 +2260,9 @@ _showImageContextMenu(e, src) {
   menu.id = 'image-context-menu';
   menu.className = 'image-context-menu';
   menu.innerHTML = `
-    <button data-action="save">💾 Save Image</button>
-    <button data-action="copy">📋 Copy Image</button>
-    <button data-action="open">🔗 Open in New Tab</button>
+    <button data-action="save">ðŸ’¾ Save Image</button>
+    <button data-action="copy">ðŸ“‹ Copy Image</button>
+    <button data-action="open">ðŸ”— Open in New Tab</button>
   `;
   menu.style.left = e.clientX + 'px';
   menu.style.top = e.clientY + 'px';
@@ -2263,7 +2309,7 @@ _showImageContextMenu(e, src) {
           r.readAsDataURL(blob);
         });
 
-        // Strategy 1: Electron desktop IPC (most reliable — main process
+        // Strategy 1: Electron desktop IPC (most reliable â€” main process
         // clipboard has no user-gesture requirement).
         if (window.havenDesktop?.clipboardWriteImage) {
           try {

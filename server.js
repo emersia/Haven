@@ -1,7 +1,7 @@
-// ── Resolve data directory BEFORE loading .env ────────────
+﻿// â”€â”€ Resolve data directory BEFORE loading .env â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const { DATA_DIR, DB_PATH, ENV_PATH, CERTS_DIR, UPLOADS_DIR } = require('./src/paths');
 
-// ── Node.js version guard ─────────────────────────────────
+// â”€â”€ Node.js version guard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const nodeMajor = parseInt(process.versions.node.split('.')[0], 10);
 if (nodeMajor < 18 || nodeMajor >= 24) {
   console.error(`\n  Haven requires Node.js 18-22. You have v${process.versions.node}.`);
@@ -18,7 +18,7 @@ if (!fs.existsSync(ENV_PATH)) {
   const example = path.join(__dirname, '.env.example');
   if (fs.existsSync(example)) {
     fs.copyFileSync(example, ENV_PATH);
-    console.log(`📄 Created .env in ${DATA_DIR} from template`);
+    console.log(`ðŸ“„ Created .env in ${DATA_DIR} from template`);
   } else {
     // Write a minimal .env so dotenv doesn't fail
     fs.writeFileSync(ENV_PATH, 'JWT_SECRET=change-me-to-something-random-and-long\n');
@@ -34,19 +34,19 @@ const crypto = require('crypto');
 const helmet = require('helmet');
 const multer = require('multer');
 
-console.log(`📂 Data directory: ${DATA_DIR}`);
+console.log(`ðŸ“‚ Data directory: ${DATA_DIR}`);
 
-// ── Auto-generate JWT secret (MUST happen before loading auth module) ──
+// â”€â”€ Auto-generate JWT secret (MUST happen before loading auth module) â”€â”€
 if (process.env.JWT_SECRET === 'change-me-to-something-random-and-long' || !process.env.JWT_SECRET) {
   const generated = crypto.randomBytes(48).toString('base64');
   let envContent = fs.readFileSync(ENV_PATH, 'utf-8');
   envContent = envContent.replace(/JWT_SECRET=.*/, `JWT_SECRET=${generated}`);
   fs.writeFileSync(ENV_PATH, envContent);
   process.env.JWT_SECRET = generated;
-  console.log('🔑 Auto-generated strong JWT_SECRET (saved to .env)');
+  console.log('ðŸ”‘ Auto-generated strong JWT_SECRET (saved to .env)');
 }
 
-// ── Auto-generate VAPID keys for push notifications ──────
+// â”€â”€ Auto-generate VAPID keys for push notifications â”€â”€â”€â”€â”€â”€
 const webpush = require('web-push');
 if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
   const vapidKeys = webpush.generateVAPIDKeys();
@@ -55,7 +55,7 @@ if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
   fs.writeFileSync(ENV_PATH, envContent);
   process.env.VAPID_PUBLIC_KEY = vapidKeys.publicKey;
   process.env.VAPID_PRIVATE_KEY = vapidKeys.privateKey;
-  console.log('🔔 Auto-generated VAPID keys for push notifications (saved to .env)');
+  console.log('ðŸ”” Auto-generated VAPID keys for push notifications (saved to .env)');
 }
 // Configure web-push with contact email (admin can override via VAPID_EMAIL in .env)
 const vapidEmail = process.env.VAPID_EMAIL || 'mailto:admin@haven.local';
@@ -98,14 +98,14 @@ function moveUploadToDeleted(relPath, srcRoot = UPLOADS_DIR) {
   } catch { /* file locked or already moved */ }
 }
 
-// Trust proxy configuration — controls how many reverse-proxy hops to trust
+// Trust proxy configuration â€” controls how many reverse-proxy hops to trust
 // when reading the real client IP from X-Forwarded-For.
 //
-//   TRUST_PROXY=1  (default) — trust the first hop (nginx/Traefik/Cloudflare)
-//   TRUST_PROXY=0             — direct exposure; do NOT trust XFF headers
+//   TRUST_PROXY=1  (default) â€” trust the first hop (nginx/Traefik/Cloudflare)
+//   TRUST_PROXY=0             â€” direct exposure; do NOT trust XFF headers
 //                               (prevents attackers from spoofing their IP to
 //                               bypass the auth rate limiter)
-//   TRUST_PROXY=2             — two proxy hops, etc.
+//   TRUST_PROXY=2             â€” two proxy hops, etc.
 //
 // Without this every user behind a reverse proxy shares the loopback IP in
 // the auth rate limiter, causing innocent users to hit the limit on their
@@ -115,7 +115,7 @@ const _trustProxy = process.env.TRUST_PROXY !== undefined
   : 1;
 app.set('trust proxy', _trustProxy);
 
-// ── IP ban gate (v3.20.0) ─────────────────────────────────
+// â”€â”€ IP ban gate (v3.20.0) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Run before anything else (parsers, helmet, static) so banned addresses
 // can't consume server resources. Cached for 30s so we aren't hitting SQLite
 // on every static asset request from a normal page load. Cache is invalidated
@@ -144,7 +144,7 @@ app.use((req, res, next) => {
 app.set('invalidateIpBanCache', invalidateIpBanCache);
 app.set('isIpBanned', isIpBanned);
 
-// ── Helper: verify admin from DB (don't trust JWT claims alone) ─────
+// â”€â”€ Helper: verify admin from DB (don't trust JWT claims alone) â”€â”€â”€â”€â”€
 // JWT isAdmin may be stale if admin was demoted since token was issued.
 function verifyAdminFromDb(user) {
   if (!user) return false;
@@ -172,7 +172,7 @@ function userHasPermission(userId, permission) {
   } catch { return false; }
 }
 
-// ── Security Headers (helmet) ────────────────────────────
+// â”€â”€ Security Headers (helmet) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -208,7 +208,7 @@ app.use((req, res, next) => {
 // Disable Express version disclosure
 app.disable('x-powered-by');
 
-// ── Body Parsing with size limits ────────────────────────
+// â”€â”€ Body Parsing with size limits â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Global limit bumped to 128kb so legit large-but-bounded payloads like the
 // per-user saved server list (PUT /api/auth/user-servers, ~40kb at 100+
 // servers) aren't rejected by the global parser before per-route parsers
@@ -217,22 +217,22 @@ app.disable('x-powered-by');
 app.use(express.json({ limit: '128kb' }));
 app.use(express.urlencoded({ extended: false, limit: '128kb' }));
 
-// ── Static files with caching ────────────────────────────
+// â”€â”€ Static files with caching â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.use(express.static(path.join(__dirname, 'public'), {
   dotfiles: 'deny',       // block .env, .git, etc.
   etag: true,             // ETag for conditional requests
   lastModified: true,     // Last-Modified header
-  maxAge: 0,              // always revalidate — prevents stale JS/CSS after deploys
+  maxAge: 0,              // always revalidate â€” prevents stale JS/CSS after deploys
 }));
 
-// ── Block access to deleted-attachments folder ──────────
+// â”€â”€ Block access to deleted-attachments folder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Files moved here are no longer part of any message; they should not be accessible.
 app.use('/uploads/deleted-attachments', (req, res) => res.status(404).end());
 
-// ── Serve uploads from external data directory ──────────
+// â”€â”€ Serve uploads from external data directory â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.use('/uploads', express.static(UPLOADS_DIR, {
   dotfiles: 'deny',
-  maxAge: '7d',       // 7 days — avatars & images rarely change; filenames include timestamps for uniqueness
+  maxAge: '7d',       // 7 days â€” avatars & images rarely change; filenames include timestamps for uniqueness
   immutable: true,    // tells browser the file at this URL will never change (cache-busting via new filename)
   etag: true,
   lastModified: true,
@@ -251,9 +251,9 @@ app.use('/uploads', express.static(UPLOADS_DIR, {
       res.setHeader('Vary', 'Origin');
     } else if (ext === '.svg') {
       // SVG (issue #5309): renderable inline via <img> tag (browsers run SVG in
-      // "secure static mode" — no scripts, no XHR), but direct navigation still
+      // "secure static mode" â€” no scripts, no XHR), but direct navigation still
       // gets attachment-disposition so opening the raw URL in a new tab can't
-      // execute the file. CSP doubles up on that — even if a future browser
+      // execute the file. CSP doubles up on that â€” even if a future browser
       // change allowed any external loads inside <img>-rendered SVG, this
       // header forbids everything except inline styles (needed for fill/stroke).
       res.setHeader('Access-Control-Allow-Origin', '*');
@@ -267,7 +267,7 @@ app.use('/uploads', express.static(UPLOADS_DIR, {
   }
 }));
 
-// ── Plugin & Theme file serving ─────────────────────────
+// â”€â”€ Plugin & Theme file serving â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const PLUGINS_DIR = path.join(__dirname, 'plugins');
 const THEMES_DIR  = path.join(__dirname, 'themes');
 if (!fs.existsSync(PLUGINS_DIR)) fs.mkdirSync(PLUGINS_DIR, { recursive: true });
@@ -310,7 +310,7 @@ app.get('/api/themes', (req, res) => {
     try {
       const row = db.prepare("SELECT value FROM server_settings WHERE key = 'published_themes'").get();
       if (row) published = JSON.parse(row.value);
-    } catch { /* DB not ready yet or parse error — default to empty */ }
+    } catch { /* DB not ready yet or parse error â€” default to empty */ }
     const themes = files.map(f => {
       const content = fs.readFileSync(path.join(THEMES_DIR, f), 'utf8');
       const meta = {};
@@ -334,7 +334,7 @@ app.get('/api/themes', (req, res) => {
   } catch { res.json([]); }
 });
 
-// ── File uploads (DB-configurable limit, avatar max 5 MB) ──
+// â”€â”€ File uploads (DB-configurable limit, avatar max 5 MB) â”€â”€
 const uploadDir = UPLOADS_DIR;
 
 const uploadStorage = multer.diskStorage({
@@ -345,36 +345,36 @@ const uploadStorage = multer.diskStorage({
   }
 });
 
-// Image-only upload — multer cap is generous; real limit enforced per-request from DB
+// Image-only upload â€” multer cap is generous; real limit enforced per-request from DB
 const upload = multer({
   storage: uploadStorage,
-  limits: { fileSize: 100 * 1024 * 1024 * 1024 },  // 100 GB ceiling — admin DB setting is the real limit
+  limits: { fileSize: 100 * 1024 * 1024 * 1024 },  // 100 GB ceiling â€” admin DB setting is the real limit
   fileFilter: (req, file, cb) => {
     if (/^image\/(jpeg|png|gif|webp)$/.test(file.mimetype)) cb(null, true);
     else cb(new Error('Only images allowed (jpg, png, gif, webp)'));
   }
 });
 
-// General file upload — no MIME restrictions; safety enforced via
+// General file upload â€” no MIME restrictions; safety enforced via
 // Content-Disposition: attachment on non-image downloads (see /uploads handler)
 const fileUpload = multer({
   storage: uploadStorage,
-  limits: { fileSize: 100 * 1024 * 1024 * 1024 },  // 100 GB ceiling — admin DB setting is the real limit
+  limits: { fileSize: 100 * 1024 * 1024 * 1024 },  // 100 GB ceiling â€” admin DB setting is the real limit
 });
 
-// ── API routes ────────────────────────────────────────────
+// â”€â”€ API routes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // authLimiter is applied per-route inside auth.js for credential endpoints
 // (login, register, TOTP, password change). Non-credential routes like
 // /validate and /user-servers are intentionally left unlimitted here so
 // 50+ concurrent users joining a stream event don't trip the limiter. (#5323)
 app.use('/api/auth', authRoutes);
 
-// ── Push notification VAPID public key endpoint ──────────
+// â”€â”€ Push notification VAPID public key endpoint â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.get('/api/push/vapid-key', (req, res) => {
   res.json({ publicKey: process.env.VAPID_PUBLIC_KEY });
 });
 
-// ── Push notification subscription endpoints ─────────────
+// â”€â”€ Push notification subscription endpoints â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.post('/api/push/subscribe', express.json(), (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   const user = token ? verifyToken(token) : null;
@@ -417,10 +417,10 @@ app.delete('/api/push/subscribe', express.json(), (req, res) => {
   }
 });
 
-// ── Per-user channel notification prefs ──────────────────
+// â”€â”€ Per-user channel notification prefs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Mirrors the localStorage `haven_muted_channels` set to the database so
 // sendPushNotifications can filter out muted recipients before they hit
-// FCM/web-push (#5399 follow-up — mobile users were getting pushes for
+// FCM/web-push (#5399 follow-up â€” mobile users were getting pushes for
 // every message regardless of channel mute state because the prefs only
 // ever lived client-side).
 app.get('/api/user/channel-prefs', (req, res) => {
@@ -462,7 +462,7 @@ app.post('/api/user/channel-prefs/mute', express.json({ limit: '4kb' }), (req, r
   }
 });
 
-// Bulk replace — used by the client on first sync to push the entire
+// Bulk replace â€” used by the client on first sync to push the entire
 // localStorage set up at once (or to converge after offline edits).
 app.put('/api/user/channel-prefs/muted', express.json({ limit: '16kb' }), (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
@@ -471,7 +471,7 @@ app.put('/api/user/channel-prefs/muted', express.json({ limit: '16kb' }), (req, 
   const codes = Array.isArray(req.body?.codes) ? req.body.codes : null;
   if (!codes || codes.length > 500)
     return res.status(400).json({ error: 'codes array required (max 500)' });
-  // Filter to plausible channel codes only — strings, 1..64 chars
+  // Filter to plausible channel codes only â€” strings, 1..64 chars
   const clean = codes.filter(c => typeof c === 'string' && c.length > 0 && c.length <= 64);
   try {
     const { getDb } = require('./src/database');
@@ -494,7 +494,7 @@ app.put('/api/user/channel-prefs/muted', express.json({ limit: '16kb' }), (req, 
   }
 });
 
-// ── ICE servers endpoint (STUN + optional TURN) ──────────
+// â”€â”€ ICE servers endpoint (STUN + optional TURN) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.get('/api/ice-servers', (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   const user = token ? verifyToken(token) : null;
@@ -540,7 +540,7 @@ app.get('/api/ice-servers', (req, res) => {
   res.json({ iceServers });
 });
 
-// ── Avatar upload endpoint (saves to /uploads, updates DB) ──
+// â”€â”€ Avatar upload endpoint (saves to /uploads, updates DB) â”€â”€
 app.post('/api/upload-avatar', uploadLimiter, (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   const user = token ? verifyToken(token) : null;
@@ -609,7 +609,7 @@ app.post('/api/upload-avatar', uploadLimiter, (req, res) => {
   });
 });
 
-// ── Avatar remove endpoint ──
+// â”€â”€ Avatar remove endpoint â”€â”€
 app.post('/api/remove-avatar', express.json(), (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   const user = token ? verifyToken(token) : null;
@@ -624,7 +624,7 @@ app.post('/api/remove-avatar', express.json(), (req, res) => {
   }
 });
 
-// ── Avatar shape endpoint ──
+// â”€â”€ Avatar shape endpoint â”€â”€
 app.post('/api/set-avatar-shape', express.json(), (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   const user = token ? verifyToken(token) : null;
@@ -641,7 +641,7 @@ app.post('/api/set-avatar-shape', express.json(), (req, res) => {
   }
 });
 
-// ── Webhook/Bot avatar upload endpoint ──
+// â”€â”€ Webhook/Bot avatar upload endpoint â”€â”€
 app.post('/api/upload-webhook-avatar', uploadLimiter, (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   const user = token ? verifyToken(token) : null;
@@ -705,7 +705,7 @@ app.post('/api/upload-webhook-avatar', uploadLimiter, (req, res) => {
   });
 });
 
-// ── Personas (proxy feature) (#86, #5349) ─────────────────
+// â”€â”€ Personas (proxy feature) (#86, #5349) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // CRUD + avatar upload for per-user personas. Triggered in chat with
 // "PersonaName: message" (handled by send-message socket handler).
 app.get('/api/personas', (req, res) => {
@@ -834,7 +834,7 @@ app.delete('/api/personas/:id', (req, res) => {
   }
 });
 
-// Persona avatar upload — same validation as user avatar (2 MB, magic-byte check)
+// Persona avatar upload â€” same validation as user avatar (2 MB, magic-byte check)
 app.post('/api/upload-persona-avatar', uploadLimiter, (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   const user = token ? verifyToken(token) : null;
@@ -901,9 +901,9 @@ app.post('/api/upload-persona-avatar', uploadLimiter, (req, res) => {
   });
 });
 
-// ── Serve pages ──────────────────────────────────────────
+// â”€â”€ Serve pages â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-// ── Tunnel API (Admin only) ──────────────────────────────
+// â”€â”€ Tunnel API (Admin only) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.get('/api/tunnel/status', (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   const user = token ? verifyToken(token) : null;
@@ -941,7 +941,7 @@ app.get('/app', (req, res) => {
   res.type('html').send(html);
 });
 
-// ── Vanity invite link (/invite/:code) ────────────────
+// â”€â”€ Vanity invite link (/invite/:code) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.get('/invite/:vanityCode', (req, res) => {
   const vanityCode = req.params.vanityCode;
   if (!vanityCode || typeof vanityCode !== 'string' || !/^[a-zA-Z0-9_-]{3,32}$/.test(vanityCode)) {
@@ -952,7 +952,7 @@ app.get('/invite/:vanityCode', (req, res) => {
   if (!row || row.value !== vanityCode) {
     return res.status(404).send('Invite link not found or expired');
   }
-  // Redirect to /app with the vanity code as a query param — the frontend will auto-join
+  // Redirect to /app with the vanity code as a query param â€” the frontend will auto-join
   res.redirect(`/app?invite=${encodeURIComponent(vanityCode)}`);
 });
 
@@ -960,7 +960,7 @@ app.get('/games/flappy', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'games', 'flappy.html'));
 });
 
-// ── Donors / sponsors list (loaded from donors.json) ──
+// â”€â”€ Donors / sponsors list (loaded from donors.json) â”€â”€
 app.get('/api/donors', (req, res) => {
   try {
     const donorsPath = path.join(__dirname, 'donors.json');
@@ -980,7 +980,7 @@ app.get('/api/donors', (req, res) => {
   }
 });
 
-// ── Health check (CORS allowed for multi-server status pings) ──
+// â”€â”€ Health check (CORS allowed for multi-server status pings) â”€â”€
 app.get('/api/health', (req, res) => {
   res.set('Access-Control-Allow-Origin', '*');
   res.set('Cross-Origin-Resource-Policy', 'cross-origin');
@@ -1003,17 +1003,17 @@ app.get('/api/health', (req, res) => {
     name,
     icon,
     fingerprint
-    // version intentionally omitted — don't fingerprint the server for attackers
+    // version intentionally omitted â€” don't fingerprint the server for attackers
   });
 });
 
-// ── Version endpoint (for update checker — authenticated users only) ──
+// â”€â”€ Version endpoint (for update checker â€” authenticated users only) â”€â”€
 app.get('/api/version', (req, res) => {
   const pkg = require('./package.json');
   res.json({ version: pkg.version });
 });
 
-// ── Public config (unauthenticated — safe, read-only aesthetics) ──
+// â”€â”€ Public config (unauthenticated â€” safe, read-only aesthetics) â”€â”€
 // Returns the admin-configured default theme so the login page can match
 // the server's look for first-time visitors who have no localStorage preference.
 app.get('/api/public-config', (req, res) => {
@@ -1039,7 +1039,7 @@ app.get('/api/public-config', (req, res) => {
       // Surface security-relevant settings users may want to know about
       // before signing up (issue #5300). Allowing a user to *see* whether
       // an admin can reset their password is the trust-and-warning half
-      // of the feature — admins enable, users get the disclosure.
+      // of the feature â€” admins enable, users get the disclosure.
       admin_password_reset_enabled: adminPwResetRow?.value === 'true'
     });
   } catch {
@@ -1047,7 +1047,7 @@ app.get('/api/public-config', (req, res) => {
   }
 });
 
-// ── Port reachability check (Admin only) ─────────────────
+// â”€â”€ Port reachability check (Admin only) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Uses external services to test if this server is reachable from the internet.
 // Returns { reachable: bool, publicIp: string|null, error: string|null }
 app.get('/api/port-check', async (req, res) => {
@@ -1105,7 +1105,7 @@ app.get('/api/port-check', async (req, res) => {
       reachable = await new Promise((resolve) => {
         const req = proto.get(`${useSSL ? 'https' : 'http'}://${publicIp}:${port}/api/health`, {
           timeout: 5000,
-          // SECURITY NOTE: rejectUnauthorized:false is intentional here — this
+          // SECURITY NOTE: rejectUnauthorized:false is intentional here â€” this
           // connects to OUR OWN public IP to test reachability. Self-signed certs
           // used by Haven would fail standard verification. This never connects
           // to third-party servers.
@@ -1127,7 +1127,7 @@ app.get('/api/port-check', async (req, res) => {
   res.json({ reachable, publicIp, error: null });
 });
 
-// ── Upload rate limiting ─────────────────────────────────
+// â”€â”€ Upload rate limiting â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const uploadLimitStore = new Map();
 function uploadLimiter(req, res, next) {
   const ip = req.ip || req.socket.remoteAddress;
@@ -1137,13 +1137,13 @@ function uploadLimiter(req, res, next) {
   if (!uploadLimitStore.has(ip)) uploadLimitStore.set(ip, []);
   const stamps = uploadLimitStore.get(ip).filter(t => now - t < windowMs);
   uploadLimitStore.set(ip, stamps);
-  if (stamps.length >= maxUploads) return res.status(429).json({ error: 'Upload rate limit — try again in a minute' });
+  if (stamps.length >= maxUploads) return res.status(429).json({ error: 'Upload rate limit â€” try again in a minute' });
   stamps.push(now);
   next();
 }
 setInterval(() => { const now = Date.now(); for (const [ip, t] of uploadLimitStore) { const f = t.filter(x => now - x < 60000); if (!f.length) uploadLimitStore.delete(ip); else uploadLimitStore.set(ip, f); } }, 5 * 60 * 1000);
 
-// ── Image upload (authenticated + not banned) ────────────
+// â”€â”€ Image upload (authenticated + not banned) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.post('/api/upload', uploadLimiter, (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   const user = token ? verifyToken(token) : null;
@@ -1216,7 +1216,7 @@ app.post('/api/upload', uploadLimiter, (req, res) => {
   });
 });
 
-// ── General file upload (authenticated + not banned) ─────
+// â”€â”€ General file upload (authenticated + not banned) â”€â”€â”€â”€â”€
 app.post('/api/upload-file', uploadLimiter, (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   const user = token ? verifyToken(token) : null;
@@ -1265,7 +1265,7 @@ app.post('/api/upload-file', uploadLimiter, (req, res) => {
   });
 });
 
-// ── Flash ROM status & download ──────────────────────────
+// â”€â”€ Flash ROM status & download â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const ROMS_DIR = path.join(__dirname, 'public', 'games', 'roms');
 const FLASH_ROM_MANIFEST = [
   { file: 'flight-759879f9.swf',    url: 'https://raw.githubusercontent.com/ancsemi/Haven/ccf21d874c5502eefccc7a46fe525a793e0bc603/public/games/roms/flight-759879f9.swf',    size: 8570000 },
@@ -1313,9 +1313,9 @@ app.post('/api/install-flash-roms', async (req, res) => {
   res.json({ results });
 });
 
-// (duplicate avatar handler removed — handled above at /api/upload-avatar)
+// (duplicate avatar handler removed â€” handled above at /api/upload-avatar)
 
-// ── Built-in sounds (bundled with Haven, always available) ────
+// â”€â”€ Built-in sounds (bundled with Haven, always available) â”€â”€â”€â”€
 const BUILTIN_SOUNDS = [
   { name: 'AOL - Door Open',       url: '/sounds/aol_door_open.mp3',   builtin: true },
   { name: 'AOL - Door Close',      url: '/sounds/aol_door_close.mp3',  builtin: true },
@@ -1324,7 +1324,7 @@ const BUILTIN_SOUNDS = [
   { name: 'AOL - Files Done',      url: '/sounds/aol_filesdone.mp3',   builtin: true },
 ];
 
-// ── Sound upload (admin only, wav/mp3/ogg, configurable max size) ────
+// â”€â”€ Sound upload (admin only, wav/mp3/ogg, configurable max size) â”€â”€â”€â”€
 function createSoundUpload() {
   const { getDb } = require('./src/database');
   const maxKb = parseInt(getDb().prepare('SELECT value FROM server_settings WHERE key = ?').get('max_sound_kb')?.value) || 1024;
@@ -1412,7 +1412,7 @@ app.patch('/api/sounds/:name', (req, res) => {
   } catch { res.status(500).json({ error: 'Failed to rename sound' }); }
 });
 
-// ── Custom emoji upload (admin only, image, configurable max size) ──
+// â”€â”€ Custom emoji upload (admin only, image, configurable max size) â”€â”€
 function createEmojiUpload() {
   const { getDb } = require('./src/database');
   const maxKb = parseInt(getDb().prepare('SELECT value FROM server_settings WHERE key = ?').get('max_emoji_kb')?.value) || 256;
@@ -1450,7 +1450,7 @@ app.post('/api/upload-emoji', uploadLimiter, (req, res) => {
   });
 });
 
-// ── Bulk emoji upload (multiple files, auto-named from filenames) ──
+// â”€â”€ Bulk emoji upload (multiple files, auto-named from filenames) â”€â”€
 app.post('/api/upload-emojis', uploadLimiter, (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   const user = token ? verifyToken(token) : null;
@@ -1511,7 +1511,7 @@ app.delete('/api/emojis/:name', (req, res) => {
   } catch { res.status(500).json({ error: 'Failed to delete emoji' }); }
 });
 
-// ── Stickers (admin/manage_stickers-only upload, anyone can list/send) ──
+// â”€â”€ Stickers (admin/manage_stickers-only upload, anyone can list/send) â”€â”€
 // (#5335) `manage_stickers` is the canonical permission. We still accept
 // `manage_emojis` as a fallback so anyone who already had emoji-management
 // access keeps sticker access without an explicit re-grant.
@@ -1523,7 +1523,7 @@ try { fs.mkdirSync(STICKERS_DIR, { recursive: true }); } catch {}
 // (#5335) Seed a small starter pack on first run so the picker isn't empty
 // out of the box. Files in public/starter-stickers/ are copied into
 // uploads/stickers/ and registered in the `stickers` table under the
-// "Starter" pack — but only if there are zero stickers in the DB. Once
+// "Starter" pack â€” but only if there are zero stickers in the DB. Once
 // any sticker exists we leave things alone so admin uploads or deletions
 // aren't trampled on next restart.
 function seedStarterStickers() {
@@ -1553,7 +1553,7 @@ function seedStarterStickers() {
     }
     if (seeded > 0) console.log(`[stickers] Seeded ${seeded} starter sticker(s) into the "Starter" pack.`);
   } catch (err) {
-    // Non-fatal — the server runs fine without the starter pack.
+    // Non-fatal â€” the server runs fine without the starter pack.
     console.warn('[stickers] Could not seed starter pack:', err?.message || err);
   }
 }
@@ -1566,7 +1566,7 @@ const stickerStorage = multer.diskStorage({
 });
 function createStickerUpload() {
   const { getDb } = require('./src/database');
-  // Stickers are larger than emojis by design — separate setting, default 1 MB.
+  // Stickers are larger than emojis by design â€” separate setting, default 1 MB.
   const maxKb = parseInt(getDb().prepare('SELECT value FROM server_settings WHERE key = ?').get('max_sticker_kb')?.value) || 1024;
   return multer({
     storage: stickerStorage,
@@ -1669,7 +1669,7 @@ app.delete('/api/stickers/:name', (req, res) => {
   } catch { res.status(500).json({ error: 'Failed to delete sticker' }); }
 });
 
-// ── GIF search proxy (GIPHY API — keeps key server-side) ──
+// â”€â”€ GIF search proxy (GIPHY API â€” keeps key server-side) â”€â”€
 function getGiphyKey() {
   // Check database first (set via admin panel), fall back to .env
   try {
@@ -1680,7 +1680,7 @@ function getGiphyKey() {
   return process.env.GIPHY_API_KEY || '';
 }
 
-// ── Server icon upload (admin only, image only, max 2 MB) ──
+// â”€â”€ Server icon upload (admin only, image only, max 2 MB) â”€â”€
 app.post('/api/upload-server-icon', uploadLimiter, (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   const user = token ? verifyToken(token) : null;
@@ -1715,7 +1715,7 @@ app.post('/api/upload-server-icon', uploadLimiter, (req, res) => {
   });
 });
 
-// ── Role icon upload (admin only, image only, max 512 KB) ──
+// â”€â”€ Role icon upload (admin only, image only, max 512 KB) â”€â”€
 app.post('/api/upload-role-icon', uploadLimiter, (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   const user = token ? verifyToken(token) : null;
@@ -1749,10 +1749,10 @@ app.post('/api/upload-role-icon', uploadLimiter, (req, res) => {
   });
 });
 
-// ── Admin: Server backup download (admin only) ──
+// â”€â”€ Admin: Server backup download (admin only) â”€â”€
 // Configurable per-section via ?include=channels,users,settings,messages,files
-// Backwards-compat: ?mode=structure → channels,users,settings ;
-//                   ?mode=full      → channels,users,settings,messages,files
+// Backwards-compat: ?mode=structure â†’ channels,users,settings ;
+//                   ?mode=full      â†’ channels,users,settings,messages,files
 // Token may be passed via ?token=... so the browser can trigger a normal download.
 const ALL_BACKUP_SECTIONS = ['channels', 'users', 'settings', 'messages', 'dms', 'files'];
 
@@ -1798,7 +1798,7 @@ function buildBackupBuffer(includeRaw) {
       }
       // Filter out DM channels (and their members) when DMs aren't included.
       // DM bodies are E2E-encrypted, but the channel rows still leak who
-      // talked to whom — keep the metadata out unless the admin opted in.
+      // talked to whom â€” keep the metadata out unless the admin opted in.
       if (!has('dms') && data.channels) {
         const dmChannelIds = new Set(data.channels.filter(c => c.is_dm).map(c => c.id));
         data.channels = data.channels.filter(c => !c.is_dm);
@@ -1896,7 +1896,7 @@ app.get('/api/admin/backup', (req, res) => {
   }
 });
 
-// ── Admin: Server backup restore (admin only, full backups only) ──
+// â”€â”€ Admin: Server backup restore (admin only, full backups only) â”€â”€
 // Stages the uploaded backup, then schedules a process exit so the
 // supervisor (Docker / systemd / installer service) restarts the server
 // with the restored DB and uploads in place. The pre-restore data is
@@ -1977,13 +1977,13 @@ app.post('/api/admin/restore', (req, res) => {
       cleanupTmp();
       res.json({
         ok: true,
-        message: 'Backup staged. Server will restart in ~2 seconds to apply. If the server does not come back up, your hosting setup may not auto-restart — start Haven manually.',
+        message: 'Backup staged. Server will restart in ~2 seconds to apply. If the server does not come back up, your hosting setup may not auto-restart â€” start Haven manually.',
         scheduled: true,
       });
 
       // Apply swap and exit so the supervisor restarts us cleanly
       setTimeout(() => {
-        console.log('🔄 Applying staged backup restore and restarting...');
+        console.log('ðŸ”„ Applying staged backup restore and restarting...');
         try {
           if (fs.existsSync(stagedDb)) {
             try { fs.copyFileSync(DB_PATH, DB_PATH + '.pre-restore'); } catch {}
@@ -2011,7 +2011,7 @@ app.post('/api/admin/restore', (req, res) => {
   });
 });
 
-// ── Server banner upload (admin only, image only, max 4 MB) ──
+// â”€â”€ Server banner upload (admin only, image only, max 4 MB) â”€â”€
 app.post('/api/upload-server-banner', uploadLimiter, (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   const user = token ? verifyToken(token) : null;
@@ -2034,7 +2034,7 @@ app.post('/api/upload-server-banner', uploadLimiter, (req, res) => {
       const isPng  = hdr[0] === 0x89 && hdr[1] === 0x50 && hdr[2] === 0x4E && hdr[3] === 0x47;
       const isGif  = hdr.slice(0, 6).toString().startsWith('GIF8');
       const isWebp = hdr.slice(0, 4).toString() === 'RIFF' && hdr.slice(8, 12).toString() === 'WEBP';
-      if (!isJpeg && !isPng && !isGif && !isWebp) { fs.unlinkSync(req.file.path); return res.status(400).json({ error: 'Invalid image — only JPG, PNG, GIF, or WebP' }); }
+      if (!isJpeg && !isPng && !isGif && !isWebp) { fs.unlinkSync(req.file.path); return res.status(400).json({ error: 'Invalid image â€” only JPG, PNG, GIF, or WebP' }); }
     } catch { try { fs.unlinkSync(req.file.path); } catch {} return res.status(400).json({ error: 'Failed to validate' }); }
 
     const bannerUrl = `/uploads/${req.file.filename}`;
@@ -2044,7 +2044,7 @@ app.post('/api/upload-server-banner', uploadLimiter, (req, res) => {
   });
 });
 
-// ── GIF endpoint rate limiting (per IP) ──────────────────
+// â”€â”€ GIF endpoint rate limiting (per IP) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const gifLimitStore = new Map();
 function gifLimiter(req, res, next) {
   const ip = req.ip || req.socket.remoteAddress;
@@ -2054,7 +2054,7 @@ function gifLimiter(req, res, next) {
   if (!gifLimitStore.has(ip)) gifLimitStore.set(ip, []);
   const stamps = gifLimitStore.get(ip).filter(t => now - t < windowMs);
   gifLimitStore.set(ip, stamps);
-  if (stamps.length >= maxReqs) return res.status(429).json({ error: 'Rate limited — try again shortly' });
+  if (stamps.length >= maxReqs) return res.status(429).json({ error: 'Rate limited â€” try again shortly' });
   stamps.push(now);
   next();
 }
@@ -2104,8 +2104,8 @@ app.get('/api/gif/trending', gifLimiter, (req, res) => {
   }).catch(() => res.status(502).json({ error: 'GIPHY API error' }));
 });
 
-// ── Link preview (Open Graph metadata) ──────────────────
-const linkPreviewCache = new Map(); // url → { data, ts }
+// â”€â”€ Link preview (Open Graph metadata) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const linkPreviewCache = new Map(); // url â†’ { data, ts }
 const PREVIEW_CACHE_TTL = 30 * 60 * 1000; // 30 min
 const PREVIEW_MAX_SIZE = 256 * 1024; // only read first 256 KB of page
 
@@ -2129,7 +2129,7 @@ const dnsResolve = promisify(dns.resolve4);
 // Rate limit link preview fetches (per IP, separate from upload limiter).
 // Returns true when the request is within the window, false if the caller
 // should serve a 429.  The route handler invokes this AFTER the cache
-// lookup, so cache hits never consume a rate-limit token — fixes a bug
+// lookup, so cache hits never consume a rate-limit token â€” fixes a bug
 // where reopening a chat with many links 429'd legitimate fresh requests
 // because each cached preview burned a slot.  (#5337)
 const previewLimitStore = new Map();
@@ -2168,7 +2168,7 @@ function isPrivateHostname(hostname) {
     host.endsWith('.local') || host.endsWith('.internal') || host.endsWith('.localhost');
 }
 
-// Validate a URL is safe to fetch (not internal/private) — checks hostname + DNS
+// Validate a URL is safe to fetch (not internal/private) â€” checks hostname + DNS
 // Set ALLOW_PRIVATE_PREVIEWS=true in .env to allow link previews for local/private services
 const allowPrivatePreviews = (process.env.ALLOW_PRIVATE_PREVIEWS || '').toLowerCase() === 'true';
 async function validateUrlSafe(urlStr) {
@@ -2188,7 +2188,7 @@ async function validateUrlSafe(urlStr) {
       }
     } catch (err) {
       if (err.message === 'Private addresses not allowed') throw err;
-      // DNS resolution failed — could be IPv6-only or non-existent; allow fetch to fail naturally
+      // DNS resolution failed â€” could be IPv6-only or non-existent; allow fetch to fail naturally
     }
   }
   return parsed;
@@ -2202,7 +2202,7 @@ app.get('/api/link-preview', async (req, res) => {
   const url = (req.query.url || '').trim();
   if (!url) return res.status(400).json({ error: 'Missing url param' });
 
-  // Cache check FIRST — cache hits should never consume a rate-limit slot.
+  // Cache check FIRST â€” cache hits should never consume a rate-limit slot.
   // Reopening a chat full of links was hitting 429 because the limiter ran
   // before the cache lookup. (#5337)
   const cached = linkPreviewCache.get(url);
@@ -2210,9 +2210,9 @@ app.get('/api/link-preview', async (req, res) => {
     return res.json(cached.data);
   }
 
-  // Cache miss — now apply the per-IP rate limit.
+  // Cache miss â€” now apply the per-IP rate limit.
   if (!previewLimiterCheck(req)) {
-    return res.status(429).json({ error: 'Rate limited — try again shortly' });
+    return res.status(429).json({ error: 'Rate limited â€” try again shortly' });
   }
 
   // Validate the initial URL is safe (protocol, hostname, DNS)
@@ -2223,18 +2223,18 @@ app.get('/api/link-preview', async (req, res) => {
     return res.status(400).json({ error: err.message || 'Invalid URL' });
   }
 
-  // Use a real browser UA — many sites (Twitter/X, Instagram, etc.) serve
+  // Use a real browser UA â€” many sites (Twitter/X, Instagram, etc.) serve
   // JS-only pages to unknown bots, omitting the OG meta tags we need.
   const PREVIEW_UA = 'Mozilla/5.0 (compatible; HavenBot/2.1; +https://github.com/ancsemi/Haven)';
 
   try {
     let data = null;
 
-    // ── Site-specific oEmbed handlers ────────────────────
-    // Native twitter.com / x.com — their HTML requires JS rendering so the generic
+    // â”€â”€ Site-specific oEmbed handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Native twitter.com / x.com â€” their HTML requires JS rendering so the generic
     // scraper gets blank OG tags. The oEmbed API returns structured data directly.
     // NOTE: fxtwitter / vxtwitter / fixupx are proxy sites that deliberately serve
-    // their own OG-enriched HTML — they must NOT be routed here; they fall through
+    // their own OG-enriched HTML â€” they must NOT be routed here; they fall through
     // to the generic OG scraper below which picks up their tags directly.
     const twitterMatch = url.match(/^https?:\/\/(?:(?:www\.|mobile\.)?(?:twitter|x)\.com)\/\w+\/status\/\d+/i);
     if (twitterMatch) {
@@ -2258,7 +2258,7 @@ app.get('/api/link-preview', async (req, res) => {
       } catch { /* fall through to generic scrape */ }
     }
 
-    // ── fxtwitter / vxtwitter / fixupx fallback for native Twitter/X links ──
+    // â”€â”€ fxtwitter / vxtwitter / fixupx fallback for native Twitter/X links â”€â”€
     // If the oEmbed handler above didn't fire (non-matching URL) or failed,
     // and the URL is a native twitter.com/x.com link, try fxtwitter as an
     // OG-enriched proxy. fxtwitter serves bot-friendly HTML with OG tags.
@@ -2291,10 +2291,10 @@ app.get('/api/link-preview', async (req, res) => {
             };
           }
         }
-      } catch { /* fxtwitter fallback failed — continue to generic scrape */ }
+      } catch { /* fxtwitter fallback failed â€” continue to generic scrape */ }
     }
 
-    // ── Reddit — serves no OG tags to unknown bots; use JSON API instead ──
+    // â”€â”€ Reddit â€” serves no OG tags to unknown bots; use JSON API instead â”€â”€
     if (!data && /^https?:\/\/(?:(?:www|old|new)\.)?reddit\.com\/r\/[\w]+\/comments\/[\w]+/i.test(url)) {
       try {
         // Reddit's .json endpoint works with any User-Agent
@@ -2312,7 +2312,7 @@ app.get('/api/link-preview', async (req, res) => {
             let redImages;
 
             if (post.is_gallery && post.media_metadata) {
-              // Gallery post — collect up to 4 preview images
+              // Gallery post â€” collect up to 4 preview images
               const imgs = Object.values(post.media_metadata)
                 .filter(m => m.status === 'valid' && m.s?.u)
                 .map(m => decodeHtmlEntities(m.s.u))
@@ -2335,10 +2335,10 @@ app.get('/api/link-preview', async (req, res) => {
             };
           }
         }
-      } catch { /* Reddit JSON fallback failed — continue to generic scrape */ }
+      } catch { /* Reddit JSON fallback failed â€” continue to generic scrape */ }
     }
 
-    // ── Pixiv — blocks bots for HTML but provides an oEmbed API ────────
+    // â”€â”€ Pixiv â€” blocks bots for HTML but provides an oEmbed API â”€â”€â”€â”€â”€â”€â”€â”€
     if (!data && /^https?:\/\/(?:www\.)?pixiv\.net\/(?:en\/)?artworks\/\d+/i.test(url)) {
       try {
         const poEmbed = await fetch(
@@ -2358,9 +2358,9 @@ app.get('/api/link-preview', async (req, res) => {
       } catch { /* fall through to generic scrape */ }
     }
 
-    // ── Bluesky — HTML is client-rendered (blank OG tags); the public AT Protocol
+    // â”€â”€ Bluesky â€” HTML is client-rendered (blank OG tags); the public AT Protocol
     // app view returns structured post data with no auth. Resolve the handle to a
-    // DID when needed, then hydrate the post and pull author / text / media. ──
+    // DID when needed, then hydrate the post and pull author / text / media. â”€â”€
     if (!data && /^https?:\/\/bsky\.app\/profile\/[^/]+\/post\/[A-Za-z0-9]+/i.test(url)) {
       try {
         const m = url.match(/^https?:\/\/bsky\.app\/profile\/([^/?#]+)\/post\/([A-Za-z0-9]+)/i);
@@ -2408,10 +2408,10 @@ app.get('/api/link-preview', async (req, res) => {
             }
           }
         }
-      } catch { /* Bluesky app view failed — continue to generic scrape */ }
+      } catch { /* Bluesky app view failed â€” continue to generic scrape */ }
     }
 
-    // ── Generic OG scrape (manual redirect following with SSRF checks) ──
+    // â”€â”€ Generic OG scrape (manual redirect following with SSRF checks) â”€â”€
     if (!data) {
       let currentUrl = url;
       let resp;
@@ -2438,7 +2438,7 @@ app.get('/api/link-preview', async (req, res) => {
           try {
             await validateUrlSafe(nextUrl);
           } catch {
-            // Redirect target is private/internal — abort (SSRF protection)
+            // Redirect target is private/internal â€” abort (SSRF protection)
             return res.json({ title: null, description: null, image: null, siteName: null });
           }
           currentUrl = nextUrl;
@@ -2456,7 +2456,7 @@ app.get('/api/link-preview', async (req, res) => {
       const html = await resp.text();
       const chunk = html.slice(0, PREVIEW_MAX_SIZE);
 
-      // Regex helper — handles attributes spanning multiple lines and both
+      // Regex helper â€” handles attributes spanning multiple lines and both
       // orderings: property before content, and content before property.
       // Decodes HTML entities so image URLs with &amp; etc. work correctly.
       const getMetaContent = (property) => {
@@ -2503,7 +2503,7 @@ app.get('/api/link-preview', async (req, res) => {
         url: getMetaContent('og:url') || url
       };
 
-      // oEmbed autodiscovery — if OG tags came back empty and the page advertises a
+      // oEmbed autodiscovery â€” if OG tags came back empty and the page advertises a
       // JSON oEmbed endpoint, use it. This future-proofs support for any oEmbed-compatible
       // site without needing a dedicated handler.
       if (!data.title && !data.image) {
@@ -2526,11 +2526,11 @@ app.get('/api/link-preview', async (req, res) => {
                 data.siteName = oj.provider_name || data.siteName;
               }
             }
-          } catch { /* autodiscovery failed — keep OG data as-is */ }
+          } catch { /* autodiscovery failed â€” keep OG data as-is */ }
         }
       }
     } else {
-      // Twitter oEmbed succeeded — try a quick scrape for the image only.
+      // Twitter oEmbed succeeded â€” try a quick scrape for the image only.
       // First try fxtwitter (bot-friendly proxy), then fall back to the original URL.
       const imageSource = /^https?:\/\/(?:(?:www\.|mobile\.)?(?:twitter|x)\.com)\/\w+\/status\/\d+/i.test(url)
         ? url.replace(/^https?:\/\/(?:www\.|mobile\.)?(?:twitter|x)\.com/i, 'https://fxtwitter.com')
@@ -2570,7 +2570,7 @@ app.get('/api/link-preview', async (req, res) => {
   }
 });
 
-// ── Games list endpoint — discover available games ──
+// â”€â”€ Games list endpoint â€” discover available games â”€â”€
 app.get('/api/games', (req, res) => {
   const gamesDir = path.join(__dirname, 'public', 'games');
   const fs2 = require('fs');
@@ -2585,7 +2585,7 @@ app.get('/api/games', (req, res) => {
   }
 });
 
-// ── High-scores REST API (mobile-safe fallback for postMessage) ──
+// â”€â”€ High-scores REST API (mobile-safe fallback for postMessage) â”€â”€
 app.get('/api/high-scores/:game', (req, res) => {
   const game = req.params.game;
   if (!/^[a-z0-9_-]{1,32}$/.test(game)) return res.status(400).json({ error: 'Invalid game id' });
@@ -2634,9 +2634,9 @@ app.post('/api/high-scores', express.json(), (req, res) => {
   res.json({ game, leaderboard });
 });
 
-// ═══════════════════════════════════════════════════════════
-// WEBHOOK / BOT INTEGRATION — incoming message endpoint
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// WEBHOOK / BOT INTEGRATION â€” incoming message endpoint
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 const rateLimit = require('express-rate-limit');
 const webhookLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, message: { error: 'Rate limit exceeded' } });
 app.post('/api/webhooks/:token', webhookLimiter, express.json({ limit: '64kb' }), (req, res) => {
@@ -2669,7 +2669,7 @@ app.post('/api/webhooks/:token', webhookLimiter, express.json({ limit: '64kb' })
     avatarUrl = /^https?:\/\//i.test(trimmed) ? trimmed : null;
   }
 
-  // Optional reply_to — bot replying to a message in the same channel (3.13.0)
+  // Optional reply_to â€” bot replying to a message in the same channel (3.13.0)
   let replyTo = null;
   if (req.body.reply_to !== undefined && req.body.reply_to !== null) {
     const rid = parseInt(req.body.reply_to, 10);
@@ -2766,7 +2766,7 @@ app.post('/api/webhooks/:token', webhookLimiter, express.json({ limit: '64kb' })
   res.status(200).json({ success: true, message_id: result.lastInsertRowid });
 });
 
-// ── Bot: Delete a message in the webhook's channel ──────
+// â”€â”€ Bot: Delete a message in the webhook's channel â”€â”€â”€â”€â”€â”€
 app.delete('/api/webhooks/:token/messages/:messageId', webhookLimiter, (req, res) => {
   const { getDb } = require('./src/database');
   const db = getDb();
@@ -2809,7 +2809,7 @@ app.delete('/api/webhooks/:token/messages/:messageId', webhookLimiter, (req, res
   res.json({ success: true });
 });
 
-// ── Bot: Play a soundboard sound in the webhook's channel ──
+// â”€â”€ Bot: Play a soundboard sound in the webhook's channel â”€â”€
 app.post('/api/webhooks/:token/sounds', webhookLimiter, express.json({ limit: '16kb' }), (req, res) => {
   const webhook = getWebhookByToken(req.params.token);
   if (!webhook) return res.status(404).json({ error: 'Webhook not found or inactive' });
@@ -2845,9 +2845,9 @@ app.post('/api/webhooks/:token/sounds', webhookLimiter, express.json({ limit: '1
   res.json({ success: true });
 });
 
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // MODERATION REST API
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 const modLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, message: { error: 'Rate limit exceeded' } });
 
 // Helper: get authenticated user from Bearer token with admin/mod check
@@ -2988,7 +2988,7 @@ app.post('/api/moderation/unmute', modLimiter, express.json({ limit: '16kb' }), 
   res.json({ success: true, message: `Unmuted ${target ? target.username : 'user'}` });
 });
 
-// GET /api/moderation/bans — list all bans
+// GET /api/moderation/bans â€” list all bans
 app.get('/api/moderation/bans', modLimiter, (req, res) => {
   const auth = getModUser(req, 'ban_user');
   if (auth.error) return res.status(auth.status).json({ error: auth.error });
@@ -3001,7 +3001,7 @@ app.get('/api/moderation/bans', modLimiter, (req, res) => {
   res.json({ bans });
 });
 
-// GET /api/moderation/mutes — list active mutes
+// GET /api/moderation/mutes â€” list active mutes
 app.get('/api/moderation/mutes', modLimiter, (req, res) => {
   const auth = getModUser(req, 'mute_user');
   if (auth.error) return res.status(auth.status).json({ error: auth.error });
@@ -3014,9 +3014,9 @@ app.get('/api/moderation/mutes', modLimiter, (req, res) => {
   res.json({ mutes });
 });
 
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // BOT SLASH COMMANDS API
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 // Helper: authenticate webhook bot by token
 function getWebhookByToken(token) {
@@ -3027,13 +3027,13 @@ function getWebhookByToken(token) {
   ).get(token);
 }
 
-// ═══════════════════════════════════════════════════════════
-// BOT MODERATION REST API (#5397) — webhook-token authenticated.
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// BOT MODERATION REST API (#5397) â€” webhook-token authenticated.
 // Each endpoint requires the bot's `can_moderate` flag to be enabled
 // by an admin via the Bot Manager. Mirrors /api/moderation/* but uses
 // webhook tokens instead of JWT bearer tokens so bots don't need a
 // user login. Audit log records the bot as actor.
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function requireModBot(req, res) {
   const webhook = getWebhookByToken(req.params.token);
   if (!webhook) { res.status(404).json({ error: 'Webhook not found or inactive' }); return null; }
@@ -3110,7 +3110,7 @@ app.post('/api/webhooks/:token/moderation/unban', webhookLimiter, express.json({
   res.json({ success: true, message: `Unbanned ${target ? target.username : 'user'}` });
 });
 
-// POST /api/webhooks/:token/moderation/mute  — body: { userId, duration (minutes), reason }
+// POST /api/webhooks/:token/moderation/mute  â€” body: { userId, duration (minutes), reason }
 app.post('/api/webhooks/:token/moderation/mute', webhookLimiter, express.json({ limit: '16kb' }), (req, res) => {
   const webhook = requireModBot(req, res); if (!webhook) return;
   const { getDb } = require('./src/database');
@@ -3150,7 +3150,7 @@ app.post('/api/webhooks/:token/moderation/unmute', webhookLimiter, express.json(
   res.json({ success: true, message: `Unmuted ${target ? target.username : 'user'}` });
 });
 
-// GET /api/webhooks/:token/commands — list registered commands
+// GET /api/webhooks/:token/commands â€” list registered commands
 app.get('/api/webhooks/:token/commands', webhookLimiter, (req, res) => {
   const webhook = getWebhookByToken(req.params.token);
   if (!webhook) return res.status(404).json({ error: 'Webhook not found or inactive' });
@@ -3175,7 +3175,7 @@ app.get('/api/webhooks/:token/commands', webhookLimiter, (req, res) => {
   res.json({ commands });
 });
 
-// POST /api/webhooks/:token/commands — register a command
+// POST /api/webhooks/:token/commands â€” register a command
 app.post('/api/webhooks/:token/commands', webhookLimiter, express.json({ limit: '16kb' }), (req, res) => {
   const webhook = getWebhookByToken(req.params.token);
   if (!webhook) return res.status(404).json({ error: 'Webhook not found or inactive' });
@@ -3224,7 +3224,7 @@ app.post('/api/webhooks/:token/commands', webhookLimiter, express.json({ limit: 
   }
 });
 
-// DELETE /api/webhooks/:token/commands/:command — unregister a command
+// DELETE /api/webhooks/:token/commands/:command â€” unregister a command
 app.delete('/api/webhooks/:token/commands/:command', webhookLimiter, (req, res) => {
   const webhook = getWebhookByToken(req.params.token);
   if (!webhook) return res.status(404).json({ error: 'Webhook not found or inactive' });
@@ -3238,7 +3238,7 @@ app.delete('/api/webhooks/:token/commands/:command', webhookLimiter, (req, res) 
   res.json({ success: true });
 });
 
-// GET /api/bot-commands — list all registered bot commands (for client autocomplete)
+// GET /api/bot-commands â€” list all registered bot commands (for client autocomplete)
 app.get('/api/bot-commands', (req, res) => {
   const { getDb } = require('./src/database');
   const rows = getDb().prepare(`
@@ -3279,9 +3279,9 @@ app.get('/api/bot-commands', (req, res) => {
   res.json({ commands });
 });
 
-// ═══════════════════════════════════════════════════════════
-// DISCORD IMPORT — upload, preview, execute
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// DISCORD IMPORT â€” upload, preview, execute
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 const os = require('os');
 const { parseDiscordExport } = require('./src/importDiscord');
 
@@ -3302,7 +3302,7 @@ const importUpload = multer({
   }
 });
 
-// ── Step 1: Upload & parse → return preview ──────────────
+// â”€â”€ Step 1: Upload & parse â†’ return preview â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.post('/api/import/discord/upload', uploadLimiter, (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   const user = token ? verifyToken(token) : null;
@@ -3323,7 +3323,7 @@ app.post('/api/import/discord/upload', uploadLimiter, (req, res) => {
       // Clean up the uploaded raw file
       try { fs.unlinkSync(req.file.path); } catch {}
 
-      // Return preview (channel list + counts — NOT the full messages)
+      // Return preview (channel list + counts â€” NOT the full messages)
       res.json({
         importId,
         format: result.format,
@@ -3344,7 +3344,7 @@ app.post('/api/import/discord/upload', uploadLimiter, (req, res) => {
   });
 });
 
-// ── Discord Direct Connect — pull messages straight from Discord's API ──
+// â”€â”€ Discord Direct Connect â€” pull messages straight from Discord's API â”€â”€
 const DISCORD_API = 'https://discord.com/api/v10';
 
 async function discordApiFetch(endpoint, userToken, retries = 2) {
@@ -3352,7 +3352,7 @@ async function discordApiFetch(endpoint, userToken, retries = 2) {
     headers: { Authorization: userToken }
   });
   if (resp.status === 401) throw new Error('Invalid or expired Discord token');
-  if (resp.status === 403) throw new Error('Access denied — check token permissions');
+  if (resp.status === 403) throw new Error('Access denied â€” check token permissions');
   if (resp.status === 429 && retries > 0) {
     const wait = parseFloat(resp.headers.get('retry-after') || '3');
     await new Promise(r => setTimeout(r, wait * 1000));
@@ -3362,7 +3362,7 @@ async function discordApiFetch(endpoint, userToken, retries = 2) {
   return resp.json();
 }
 
-// Step A: validate token → list servers
+// Step A: validate token â†’ list servers
 app.post('/api/import/discord/connect', express.json(), async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   const user = token ? verifyToken(token) : null;
@@ -3401,7 +3401,7 @@ app.post('/api/import/discord/guild-channels', express.json(), async (req, res) 
     const categories = {};
     allChannels.filter(c => c.type === 4).forEach(c => { categories[c.id] = c.name; });
 
-    // Text (0), Announcement (5), Forum (15), Media (16) — all contain readable content
+    // Text (0), Announcement (5), Forum (15), Media (16) â€” all contain readable content
     const textTypes = new Set([0, 5, 15, 16]);
     const channelsList = allChannels
       .filter(c => textTypes.has(c.type))
@@ -3471,7 +3471,7 @@ app.post('/api/import/discord/guild-channels', express.json(), async (req, res) 
   }
 });
 
-// Step C: fetch all messages from selected channels → save temp → return preview
+// Step C: fetch all messages from selected channels â†’ save temp â†’ return preview
 app.post('/api/import/discord/fetch', express.json(), async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   const user = token ? verifyToken(token) : null;
@@ -3503,12 +3503,12 @@ app.post('/api/import/discord/fetch', express.json(), async (req, res) => {
           let content = msg.content || '';
           if (Array.isArray(msg.attachments)) {
             for (const a of msg.attachments) {
-              content += `\n📎 ${a.url ? '[' + a.filename + '](' + a.url + ')' : a.filename}`;
+              content += `\nðŸ“Ž ${a.url ? '[' + a.filename + '](' + a.url + ')' : a.filename}`;
             }
           }
           if (Array.isArray(msg.embeds)) {
             for (const e of msg.embeds) {
-              if (e.title) content += `\n🔗 **${e.title}**`;
+              if (e.title) content += `\nðŸ”— **${e.title}**`;
               if (e.description) content += `\n${e.description}`;
               if (e.url && !content.includes(e.url)) content += `\n${e.url}`;
             }
@@ -3528,7 +3528,7 @@ app.post('/api/import/discord/fetch', express.json(), async (req, res) => {
             timestamp: msg.timestamp,
             isPinned: msg.pinned || false,
             reactions: (msg.reactions || []).map(r => ({
-              emoji: r.emoji?.name || '❓',
+              emoji: r.emoji?.name || 'â“',
               count: r.count || 1
             })),
             replyTo: msg.message_reference?.message_id || null
@@ -3571,7 +3571,7 @@ app.post('/api/import/discord/fetch', express.json(), async (req, res) => {
   }
 });
 
-// ── Periodic cleanup of orphaned import temp files (1 hour TTL) ──
+// â”€â”€ Periodic cleanup of orphaned import temp files (1 hour TTL) â”€â”€
 function cleanupTempImports() {
   try {
     const tmpDir = os.tmpdir();
@@ -3590,7 +3590,7 @@ function cleanupTempImports() {
 cleanupTempImports();
 setInterval(cleanupTempImports, 15 * 60 * 1000); // then every 15 min
 
-// ── Step 2: Execute the import ───────────────────────────
+// â”€â”€ Step 2: Execute the import â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.post('/api/import/discord/execute', express.json({ limit: '1mb' }), (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   const user = token ? verifyToken(token) : null;
@@ -3632,7 +3632,7 @@ app.post('/api/import/discord/execute', express.json({ limit: '1mb' }), (req, re
         const code = generateChannelCode();
 
         // Reuse an existing Haven channel if it was created from the same Discord channel.
-        // This makes re-importing (or importing a second overlapping export) idempotent —
+        // This makes re-importing (or importing a second overlapping export) idempotent â€”
         // new messages are appended, duplicates are skipped, and native Haven messages are untouched.
         let channelId;
         const discordChannelId = channelData.discordId || null;
@@ -3661,7 +3661,7 @@ app.post('/api/import/discord/execute', express.json({ limit: '1mb' }), (req, re
           (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
         );
 
-        // Discord message ID → Haven message ID (for reply threading)
+        // Discord message ID â†’ Haven message ID (for reply threading)
         const idMap = {};
 
         const insertMsg = db.prepare(`
@@ -3693,7 +3693,7 @@ app.post('/api/import/discord/execute', express.json({ limit: '1mb' }), (req, re
           );
 
           if (result.changes === 0) {
-            // Duplicate Discord message — resolve ID for reply threading and skip
+            // Duplicate Discord message â€” resolve ID for reply threading and skip
             if (msg.discordId) {
               const existing = lookupByDiscordId.get(msg.discordId);
               if (existing) idMap[msg.discordId] = existing.id;
@@ -3766,7 +3766,7 @@ const forceHttp = (process.env.FORCE_HTTP || '').toLowerCase() === 'true';
 const useSSL = sslCert && sslKey && !forceHttp;
 
 if (forceHttp) {
-  console.log('⚡ FORCE_HTTP=true — running plain HTTP (reverse proxy mode)');
+  console.log('âš¡ FORCE_HTTP=true â€” running plain HTTP (reverse proxy mode)');
 }
 
 if (useSSL) {
@@ -3776,7 +3776,7 @@ if (useSSL) {
       key: fs.readFileSync(sslKey)
     };
     server = createHttpsServer(sslOptions, app);
-    console.log('🔒 HTTPS enabled');
+    console.log('ðŸ”’ HTTPS enabled');
 
     // Also start an HTTP server that redirects to HTTPS (hardened)
     const httpRedirect = express();
@@ -3794,7 +3794,7 @@ if (useSSL) {
       next();
     });
     setInterval(() => { const now = Date.now(); for (const [ip, t] of redirectHits) { const f = t.filter(x => now - x < 60000); if (!f.length) redirectHits.delete(ip); else redirectHits.set(ip, f); } }, 5 * 60 * 1000);
-    // Only redirect to our own host — prevent open redirect
+    // Only redirect to our own host â€” prevent open redirect
     const safePort = parseInt(process.env.PORT || 3000);
     httpRedirect.all('*', (req, res) => {
       // Sanitize: only allow path portion, strip host manipulation
@@ -3808,7 +3808,7 @@ if (useSSL) {
     httpRedirectServer.headersTimeout = 5000;
     httpRedirectServer.requestTimeout = 5000;
     httpRedirectServer.listen(HTTP_REDIRECT_PORT, process.env.HOST || '0.0.0.0', () => {
-      console.log(`↪️  HTTP redirect running on port ${HTTP_REDIRECT_PORT} → HTTPS`);
+      console.log(`â†ªï¸  HTTP redirect running on port ${HTTP_REDIRECT_PORT} â†’ HTTPS`);
     });
   } catch (err) {
     console.error('Failed to load SSL certs, falling back to HTTP:', err.message);
@@ -3816,13 +3816,13 @@ if (useSSL) {
   }
 } else {
   server = createServer(app);
-  console.log('⚠️  Running HTTP — voice chat requires HTTPS for remote connections');
+  console.log('âš ï¸  Running HTTP â€” voice chat requires HTTPS for remote connections');
 }
 
-// Socket.IO — locked down
+// Socket.IO â€” locked down
 const io = new Server(server, {
   cors: {
-    origin: false,         // same-origin only — no cross-site connections
+    origin: false,         // same-origin only â€” no cross-site connections
   },
   maxHttpBufferSize: 64 * 1024,  // 64KB max per message (was 1MB)
   pingTimeout: 60000,
@@ -3836,7 +3836,7 @@ const db = initDatabase();
 // (#5335) Seed starter stickers now that the DB is ready.
 try { seedStarterStickers(); } catch {}
 
-// ── Admin password reset (one-time, from .env) ───────────
+// â”€â”€ Admin password reset (one-time, from .env) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Set ADMIN_RESET_PASSWORD in .env, restart, and it resets the admin's password.
 // The variable is removed from .env automatically after use.
 if (process.env.ADMIN_RESET_PASSWORD) {
@@ -3849,7 +3849,7 @@ if (process.env.ADMIN_RESET_PASSWORD) {
     db.prepare('UPDATE users SET password_hash = ?, password_version = ?, is_admin = 1 WHERE id = ?').run(newHash, newPwv, adminUser.id);
     db.prepare('DELETE FROM bans WHERE user_id = ?').run(adminUser.id);
     db.prepare('DELETE FROM mutes WHERE user_id = ?').run(adminUser.id);
-    console.log(`🔑 Admin password reset for "${adminUser.username}" via ADMIN_RESET_PASSWORD`);
+    console.log(`ðŸ”‘ Admin password reset for "${adminUser.username}" via ADMIN_RESET_PASSWORD`);
     // Remove the variable from .env so it doesn't re-run on next restart
     try {
       let envContent = fs.readFileSync(ENV_PATH, 'utf-8');
@@ -3858,7 +3858,7 @@ if (process.env.ADMIN_RESET_PASSWORD) {
       console.log('   Removed ADMIN_RESET_PASSWORD from .env (one-time use)');
     } catch {}
   } else {
-    console.warn(`⚠️  ADMIN_RESET_PASSWORD set but no user "${adminName}" found — skipping`);
+    console.warn(`âš ï¸  ADMIN_RESET_PASSWORD set but no user "${adminName}" found â€” skipping`);
   }
   delete process.env.ADMIN_RESET_PASSWORD;
 }
@@ -3868,7 +3868,7 @@ app.set('io', io);   // expose to auth routes (session invalidation on password 
 setupSocketHandlers(io, db, { invalidateIpBanCache });
 registerProcessCleanup();
 
-// ── Auto-cleanup interval (runs every 15 minutes) ───────
+// â”€â”€ Auto-cleanup interval (runs every 15 minutes) â”€â”€â”€â”€â”€â”€â”€
 function runAutoCleanup() {
   try {
     const getSetting = (key) => {
@@ -4014,7 +4014,7 @@ function runAutoCleanup() {
           } catch { /* skip */ }
         });
         if (filesDeleted > 0) {
-          console.log(`🗑️  Auto-cleanup: removed ${filesDeleted} old uploaded files`);
+          console.log(`ðŸ—‘ï¸  Auto-cleanup: removed ${filesDeleted} old uploaded files`);
         }
 
         // Clean up deleted-attachments folder (files moved here when messages were deleted)
@@ -4031,13 +4031,13 @@ function runAutoCleanup() {
             } catch { /* skip */ }
           }
           if (daDeleted > 0) {
-            console.log(`🗑️  Auto-cleanup: removed ${daDeleted} files from deleted-attachments`);
+            console.log(`ðŸ—‘ï¸  Auto-cleanup: removed ${daDeleted} files from deleted-attachments`);
           }
         }
       }
     }
 
-    // 3. (#5282) Orphan-DM sweep — delete any DM channel that has dropped
+    // 3. (#5282) Orphan-DM sweep â€” delete any DM channel that has dropped
     // below 2 members (one or both participants deleted their account or
     // were force-removed). channel_members.user_id has ON DELETE CASCADE
     // so the row vanishes when the user does, but the DM channel itself
@@ -4076,7 +4076,7 @@ function runAutoCleanup() {
               moveUploadToDeleted(fn, UPLOADS_DIR);
             }
           }
-          // Delete the channel — cascades to messages + read_positions +
+          // Delete the channel â€” cascades to messages + read_positions +
           // channel_members + reactions etc. via the existing FKs.
           db.prepare('DELETE FROM channels WHERE id = ?').run(ch.id);
           orphansDeleted++;
@@ -4085,12 +4085,12 @@ function runAutoCleanup() {
         }
       }
       if (orphansDeleted > 0) {
-        console.log(`🗑️  Auto-cleanup: removed ${orphansDeleted} orphan DM channel(s)`);
+        console.log(`ðŸ—‘ï¸  Auto-cleanup: removed ${orphansDeleted} orphan DM channel(s)`);
       }
     } catch (e) { /* sweep is best-effort */ }
 
     if (totalDeleted > 0) {
-      console.log(`🗑️  Auto-cleanup: deleted ${totalDeleted} old messages`);
+      console.log(`ðŸ—‘ï¸  Auto-cleanup: deleted ${totalDeleted} old messages`);
     }
   } catch (err) {
     console.error('Auto-cleanup error:', err);
@@ -4104,7 +4104,7 @@ setTimeout(runAutoCleanup, 30000);
 // Expose globally so socketHandlers can trigger it
 global.runAutoCleanup = runAutoCleanup;
 
-// ── Auto-backup (runs hourly, decides per server settings) ───────
+// â”€â”€ Auto-backup (runs hourly, decides per server settings) â”€â”€â”€â”€â”€â”€â”€
 // Stored under DATA_DIR/auto-backups. Pruned to keep N most recent.
 const AUTO_BACKUP_DIR = path.join(DATA_DIR, 'auto-backups');
 function pruneAutoBackups(retain) {
@@ -4146,7 +4146,7 @@ function runAutoBackup() {
     fs.writeFileSync(outPath, buf);
     db.prepare("INSERT OR REPLACE INTO server_settings (key, value) VALUES ('auto_backup_last_run', ?)").run(String(now));
     pruneAutoBackups(retain);
-    console.log(`💾 Auto-backup written: ${filename} (${(buf.length / 1024 / 1024).toFixed(2)} MB)`);
+    console.log(`ðŸ’¾ Auto-backup written: ${filename} (${(buf.length / 1024 / 1024).toFixed(2)} MB)`);
   } catch (err) {
     console.error('[AutoBackup] Failed:', err);
   }
@@ -4158,7 +4158,7 @@ setInterval(runAutoBackup, 60 * 60 * 1000);
 // First check 60s after boot so it doesn't fight with cleanup or migrations
 setTimeout(runAutoBackup, 60000);
 
-// ── Admin: list / download / delete / trigger auto-backups ─────
+// â”€â”€ Admin: list / download / delete / trigger auto-backups â”€â”€â”€â”€â”€
 app.get('/api/admin/auto-backups', (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   const user = token ? verifyToken(token) : null;
@@ -4216,9 +4216,9 @@ app.post('/api/admin/auto-backups/run-now', (req, res) => {
   res.json({ ok: true });
 });
 
-// ── Admin: dynamic DNS status + force-refresh ─────────────
+// â”€â”€ Admin: dynamic DNS status + force-refresh â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Returns the last DDNS update result (provider, IP, ok/error, timestamp).
-// POST forces an immediate update — useful if the user just changed their
+// POST forces an immediate update â€” useful if the user just changed their
 // .env or believes the cached IP is stale (ISP rotation, VPN toggle, etc.).
 app.get('/api/admin/ddns/status', (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
@@ -4241,9 +4241,9 @@ app.post('/api/admin/ddns/refresh', async (req, res) => {
   }
 });
 
-// ── Admin: in-app update check + run ─────────────────────
+// â”€â”€ Admin: in-app update check + run â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Detects how Haven was installed and returns the right command (or runs it).
-// Docker is intentionally NOT auto-runnable from inside the container — we just
+// Docker is intentionally NOT auto-runnable from inside the container â€” we just
 // surface the right command for the operator to run on the host.
 function detectInstallMethod() {
   const cwd = process.cwd();
@@ -4342,7 +4342,7 @@ app.post('/api/admin/update/run', (req, res) => {
 
   // Run the update command in a detached child process so the parent can exit cleanly.
   const { spawn } = require('child_process');
-  console.log(`🔄 [Update] Running update command for method=${method}: ${instructions.command}`);
+  console.log(`ðŸ”„ [Update] Running update command for method=${method}: ${instructions.command}`);
   setTimeout(() => {
     try {
       const child = spawn(instructions.command, {
@@ -4357,20 +4357,20 @@ app.post('/api/admin/update/run', (req, res) => {
     }
     // Give the child a moment to start, then exit so the supervisor restarts us.
     setTimeout(() => {
-      console.log('🔄 [Update] Exiting so supervisor restarts on new code…');
+      console.log('ðŸ”„ [Update] Exiting so supervisor restarts on new codeâ€¦');
       process.exit(0);
     }, 1500);
   }, 1500);
 });
 
-// ── Catch-all: 404 ──────────────────────────────────────
-// Must be registered AFTER every app.get/post/etc. handler — Express
+// â”€â”€ Catch-all: 404 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Must be registered AFTER every app.get/post/etc. handler â€” Express
 // matches in registration order, so anything below this never runs.
 app.use((req, res) => {
   res.status(404).json({ error: 'Not found' });
 });
 
-// ── Global error handler (never leak stack traces) ──────
+// â”€â”€ Global error handler (never leak stack traces) â”€â”€â”€â”€â”€â”€
 app.use((err, req, res, _next) => {
   console.error('Unhandled error:', err);
   res.status(500).json({ error: 'Internal server error' });
@@ -4380,7 +4380,7 @@ const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 const protocol = useSSL ? 'https' : 'http';
 
-// ── Crash log helper ─────────────────────────────────────
+// â”€â”€ Crash log helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Write crash events to a file so they survive even when stdout
 // is not captured (common on systemd-less Pi setups, screen
 // sessions that were closed, etc.).
@@ -4431,7 +4431,7 @@ function logCrash(label, detail) {
                  `  RSS=${Math.round(mem.rss / 1048576)}MB Heap=${Math.round(mem.heapUsed / 1048576)}/${Math.round(mem.heapTotal / 1048576)}MB\n`;
     if (!_consolePipeBroken) {
       try {
-        console.error(`⚠️  ${label}:`, detail);
+        console.error(`âš ï¸  ${label}:`, detail);
       } catch (e) {
         if (isBrokenPipeError(e)) _consolePipeBroken = true;
       }
@@ -4447,7 +4447,7 @@ function logCrash(label, detail) {
   }
 }
 
-// ── Global crash prevention ──────────────────────────────
+// â”€â”€ Global crash prevention â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Prevent the entire server from dying due to an uncaught exception
 // in a socket handler or background task.  Log the error so it
 // can be debugged, but keep the process alive.
@@ -4466,8 +4466,8 @@ process.on('unhandledRejection', (reason) => {
   logCrash('Unhandled promise rejection (server kept alive)', reason);
 });
 
-// ── Process exit logging ─────────────────────────────────
-// Catches ALL exits — including native crashes and V8 OOM.
+// â”€â”€ Process exit logging â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Catches ALL exits â€” including native crashes and V8 OOM.
 // The 'exit' event fires even for abort() / SIGSEGV on some
 // Node versions.  We also log SIGABRT (V8 OOM fires this).
 process.on('exit', (code) => {
@@ -4478,7 +4478,7 @@ process.on('exit', (code) => {
   }
 });
 
-// ── Event loop lag monitor ───────────────────────────────
+// â”€â”€ Event loop lag monitor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Detects when the event loop is blocked (heavy sync SQLite ops
 // or native module work).  Logs a warning when lag exceeds 500ms
 // so we can correlate with crashes on low-power hardware.
@@ -4492,7 +4492,7 @@ setInterval(() => {
   _lastTick = now;
 }, 2000).unref();
 
-// ── Memory watchdog ──────────────────────────────────────
+// â”€â”€ Memory watchdog â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Periodically log memory usage and nudge GC when heap is getting large.
 // This helps prevent the Oilpan "large allocation" OOM in Haven Desktop
 // where the server runs alongside Electron.
@@ -4526,7 +4526,7 @@ setInterval(() => {
   }
 }, 30000);  // every 30 seconds
 
-// ── Anti-Slowloris: server-level timeouts ────────────────
+// â”€â”€ Anti-Slowloris: server-level timeouts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 server.headersTimeout = 15000;     // 15s to send all headers
 server.requestTimeout = 30000;     // 30s total request time
 server.keepAliveTimeout = 65000;   // slightly above typical ALB/LB timeout
@@ -4534,14 +4534,14 @@ server.timeout = 120000;           // 2 min absolute socket timeout
 
 server.listen(PORT, HOST, () => {
   console.log(`
-╔══════════════════════════════════════════╗
-║       🏠  HAVEN is running               ║
-╠══════════════════════════════════════════╣
-║  Name:    ${(process.env.SERVER_NAME || 'Haven').padEnd(29)}║
-║  Local:   ${protocol}://localhost:${PORT}             ║
-║  Network: ${protocol}://YOUR_IP:${PORT}              ║
-║  Admin:   ${(process.env.ADMIN_USERNAME || 'admin').padEnd(29)}║
-╚══════════════════════════════════════════╝
+â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—
+â•‘       ðŸ   HAVEN is running               â•‘
+â• â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•£
+â•‘  Name:    ${(process.env.SERVER_NAME || 'Haven').padEnd(29)}â•‘
+â•‘  Local:   ${protocol}://localhost:${PORT}             â•‘
+â•‘  Network: ${protocol}://YOUR_IP:${PORT}              â•‘
+â•‘  Admin:   ${(process.env.ADMIN_USERNAME || 'admin').padEnd(29)}â•‘
+â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   `);
   // Tunnel is now started manually via the admin panel button (no auto-start)
   // Dynamic DNS auto-updater (kicks in only if DDNS_PROVIDER is set in .env)
@@ -4552,7 +4552,7 @@ function gracefulShutdown(signal) {
   const ts = new Date().toISOString();
   const line = `[${ts}] Graceful shutdown: ${signal}\n`;
   try { rotateCrashLogIfNeeded(); fs.appendFileSync(CRASH_LOG, line); } catch {}
-  console.log(`\n${signal} received — shutting down`);
+  console.log(`\n${signal} received â€” shutting down`);
   io.close();
   server.close(() => process.exit(0));
 }

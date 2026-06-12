@@ -2534,6 +2534,10 @@
         <div class="sound-search-row">
           <input type="text" id="soundboard-search" data-i18n-placeholder="modals.sound_manager.search_placeholder" placeholder="Search sounds..." class="settings-text-input" style="flex:1">
           <button id="soundboard-popout-btn" class="icon-btn small" title="Pop out soundboard">⧉</button>
+                <div style="display:flex;gap:8px;margin-bottom:8px;font-size:12px">
+                  <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" id="soundboard-show-hidden" style="cursor:pointer"> Show hidden sounds</label>
+                  <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" id="soundboard-sidebar-mode" style="cursor:pointer"> Sidebar layout</label>
+                </div>
         </div>
         <div id="soundboard-grid" class="soundboard-grid">
           <p class="muted-text" data-i18n="modals.sound_manager.no_sounds">No sounds available</p>
