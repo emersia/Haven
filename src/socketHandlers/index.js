@@ -244,6 +244,54 @@ function setupSocketHandlers(io, db, opts = {}) {
         WHERE cm.user_id = ?
         ORDER BY c.is_dm, c.position, c.name
       `).all(userId);
+
+      // Self-heal legacy accounts that somehow ended up with zero memberships.
+      // This restores visibility without requiring the user to manually join by code.
+      if (channels.length === 0) {
+        const userRow = db.prepare('SELECT is_guest FROM users WHERE id = ?').get(userId);
+        if (!userRow || !userRow.is_guest) {
+          let targetRows = [];
+          try {
+            const djc = db.prepare("SELECT value FROM server_settings WHERE key = 'default_join_channels'").get();
+            const parsed = djc && djc.value ? JSON.parse(djc.value) : [];
+            const ids = Array.isArray(parsed)
+              ? parsed.map(n => parseInt(n, 10)).filter(n => Number.isInteger(n) && n > 0)
+              : [];
+
+            if (ids.length > 0) {
+              const ph = ids.map(() => '?').join(',');
+              targetRows = db.prepare(
+                `SELECT id FROM channels WHERE is_dm = 0 AND is_private = 0 AND id IN (${ph})`
+              ).all(...ids);
+            }
+          } catch {
+            targetRows = [];
+          }
+
+          if (targetRows.length === 0) {
+            targetRows = db.prepare(
+              'SELECT id FROM channels WHERE is_dm = 0 AND is_private = 0 ORDER BY position, name'
+            ).all();
+          }
+
+          if (targetRows.length > 0) {
+            const insertMember = db.prepare('INSERT OR IGNORE INTO channel_members (channel_id, user_id) VALUES (?, ?)');
+            for (const row of targetRows) insertMember.run(row.id, userId);
+            channels = db.prepare(`
+              SELECT c.id, c.name, c.code, c.created_by, c.topic, c.is_dm,
+                     c.code_visibility, c.code_mode, c.code_rotation_type, c.code_rotation_interval,
+                     c.parent_channel_id, c.position, c.is_private, c.expires_at, c.is_temp_voice,
+                     c.streams_enabled, c.music_enabled, c.media_enabled, c.slow_mode_interval, c.category, c.sort_alphabetical,
+                     c.cleanup_exempt, c.channel_type, c.voice_user_limit, c.notification_type, c.voice_enabled, c.text_enabled, c.voice_bitrate,
+                     c.afk_sub_code, c.afk_timeout_minutes, c.read_only, c.auto_delete_mode, c.auto_delete_interval_hours, c.default_role_id
+              FROM channels c
+              JOIN channel_members cm ON c.id = cm.channel_id
+              WHERE cm.user_id = ?
+              ORDER BY c.is_dm, c.position, c.name
+            `).all(userId);
+          }
+        }
+      }
     }
 
     if (channels.length > 0) {
