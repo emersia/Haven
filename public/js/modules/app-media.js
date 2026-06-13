@@ -389,6 +389,12 @@ _setupSoundManagement() {
     if (e.target === e.currentTarget) e.currentTarget.style.display = 'none';
   });
 
+  // Close soundboard sidebar panel
+  document.getElementById('sb-sidebar-close')?.addEventListener('click', () => {
+    const p = document.getElementById('sb-sidebar-panel');
+    if (p) p.style.display = 'none';
+  });
+
   // Tab switching
   document.querySelectorAll('.sound-tab').forEach(tab => {
     tab.addEventListener('click', () => {
@@ -553,6 +559,11 @@ _openSoundModal(tab = 'soundboard') {
     setTimeout(() => { if (this._soundboardPip) this._soundboardPip.style.zIndex = '10000'; }, 400);
     return;
   }
+  // In sidebar mode, open the sidebar panel instead of the modal (for the soundboard tab)
+  if (this._soundboardSidebarMode && tab === 'soundboard') {
+    this._toggleSoundboardSidebar();
+    return;
+  }
   // Show admin tab only if user is admin or has manage_soundboard permission
   const adminTab = modal.querySelector('.sound-tab-admin');
   if (adminTab) adminTab.style.display = (this.user?.is_admin || this._hasPerm('manage_soundboard')) ? '' : 'none';
@@ -569,6 +580,44 @@ _openSoundModal(tab = 'soundboard') {
   if (popoutBtn) { popoutBtn.textContent = '\u29c9'; popoutBtn.title = 'Pop out soundboard'; }
   this._renderSoundboard();
   this._renderAssignTab();
+},
+
+_toggleSoundboardSidebar() {
+  const panel = document.getElementById('sb-sidebar-panel');
+  if (!panel) return;
+  if (panel.style.display !== 'none') {
+    panel.style.display = 'none';
+    return;
+  }
+  panel.style.display = 'flex';
+  this._renderSoundboardSidebar();
+  const search = document.getElementById('sb-sidebar-search');
+  if (search && !search._sbListenerAttached) {
+    search._sbListenerAttached = true;
+    search.addEventListener('input', () => this._renderSoundboardSidebar(search.value.trim()));
+  }
+},
+
+_renderSoundboardSidebar(filter = '') {
+  const grid = document.getElementById('sb-sidebar-grid');
+  if (!grid) return;
+  let sounds = (this.customSounds || []).filter(s =>
+    (!filter || s.name.toLowerCase().includes(filter.toLowerCase())) &&
+    (!this._soundPrefs[s.name]?.hidden || this._showHiddenSounds)
+  );
+  const hotkeyMap = {};
+  Object.entries(this._soundHotkeys).forEach(([hk, name]) => { hotkeyMap[name] = hk; });
+  const html = sounds.length === 0
+    ? `<p class="muted-text">${filter ? 'No matching sounds' : 'No sounds available'}</p>`
+    : sounds.map(s => {
+        const hk = hotkeyMap[s.name];
+        const hotkeyHtml = hk ? `<span class="sb-hotkey">${this._escapeHtml(hk)}</span>` : '';
+        return `<button class="soundboard-btn${this._soundPrefs[s.name]?.hidden ? ' hidden-sound' : ''}" data-name="${this._escapeHtml(s.name)}" data-url="${this._escapeHtml(s.url)}"><span class="sb-name">${this._escapeHtml(s.name)}</span>${hotkeyHtml}</button>`;
+      }).join('');
+  grid.innerHTML = html;
+  grid.querySelectorAll('.soundboard-btn').forEach(btn => {
+    btn.addEventListener('click', () => this._playSoundFile(btn.dataset.url));
+  });
 },
 
 _popOutSoundboard() {
@@ -649,6 +698,11 @@ async _loadCustomSounds() {
     if (document.getElementById('sound-modal')?.style.display === 'flex' || this._soundboardPip) {
       this._renderSoundboard();
       this._renderAssignTab();
+    }
+    // Re-render sidebar panel if it's open
+    const sbPanel = document.getElementById('sb-sidebar-panel');
+    if (sbPanel && sbPanel.style.display !== 'none') {
+      this._renderSoundboardSidebar(document.getElementById('sb-sidebar-search')?.value?.trim() || '');
     }
   } catch { /* ignore */ }
 },

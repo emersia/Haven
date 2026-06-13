@@ -2536,7 +2536,7 @@
           <button id="soundboard-popout-btn" class="icon-btn small" title="Pop out soundboard">⧉</button>
                 <div style="display:flex;gap:8px;margin-bottom:8px;font-size:12px">
                   <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" id="soundboard-show-hidden" style="cursor:pointer"> Show hidden sounds</label>
-                  <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" id="soundboard-sidebar-mode" style="cursor:pointer"> Sidebar layout</label>
+                  <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" id="soundboard-sidebar-mode" style="cursor:pointer"> Sidebar mode</label>
                 </div>
         </div>
         <div id="soundboard-grid" class="soundboard-grid">
@@ -2587,6 +2587,18 @@
       <div class="modal-actions">
         <button class="btn-sm" id="close-sound-modal-btn" data-i18n="modals.common.close">Close</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Soundboard Sidebar Panel -->
+  <div id="sb-sidebar-panel" class="sb-sidebar-panel" style="display:none">
+    <div class="sb-sidebar-header">
+      <span>🎵 Soundboard</span>
+      <button id="sb-sidebar-close" class="sb-sidebar-close-btn" title="Close">&times;</button>
+    </div>
+    <div class="sb-sidebar-body">
+      <input type="text" id="sb-sidebar-search" placeholder="Search sounds..." class="settings-text-input" style="width:100%;box-sizing:border-box;font-size:12px">
+      <div id="sb-sidebar-grid" class="soundboard-grid sidebar-mode"></div>
     </div>
   </div>
 
