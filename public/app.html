@@ -533,7 +533,19 @@
         </div>
       </main>
 
-      <!-- Voice/users sidebar collapse arrow — fixed, near top of right edge -->
+      <!-- ─── Soundboard Sidebar (twin to voice/users — sits directly LEFT of right-sidebar) ─── -->
+      <!-- Soundboard toggle arrow — fixed, sits at left edge of soundboard panel -->
+      <button id="sb-sidebar-toggle-btn" class="sb-sidebar-toggle-btn" style="display:none" title="Toggle soundboard panel">&#x276F;</button>
+      <aside id="sb-sidebar-panel" class="sb-sidebar-panel sb-hidden">
+        <div id="sb-sidebar-resize-handle" class="sb-sidebar-resize-handle"></div>
+        <div class="sb-sidebar-header">&#x1F3B5; Soundboard</div>
+        <div class="sb-sidebar-body">
+          <input type="text" id="sb-sidebar-search" placeholder="Search sounds..." class="settings-text-input" style="width:100%;box-sizing:border-box;font-size:12px">
+          <div id="sb-sidebar-grid" class="soundboard-grid sidebar-mode"></div>
+        </div>
+      </aside>
+
+      <!-- Voice/users sidebar collapse arrow — fixed, sits at left edge of voice/users panel -->
       <button id="sidebar-toggle-btn" class="sidebar-collapse-btn" data-i18n-title="app.actions.toggle_members_panel" data-i18n-aria-label="app.actions.toggle_members_panel" title="Toggle members panel" aria-label="Toggle members panel">&#x276F;</button>
 
       <!-- ─── Right Sidebar ───────────────────────────── -->
@@ -645,18 +657,6 @@
             </svg>
             <span data-i18n="app.actions.settings">Settings</span>
           </button>
-        </div>
-      </aside>
-
-      <!-- ─── Soundboard Sidebar (in-flow, rightmost panel) ─── -->
-      <!-- Soundboard toggle arrow — fixed to far right edge of viewport -->
-      <button id="sb-sidebar-toggle-btn" class="sb-sidebar-toggle-btn" style="display:none" title="Toggle soundboard panel">&#x276F;</button>
-      <aside id="sb-sidebar-panel" class="sb-sidebar-panel sb-hidden">
-        <div id="sb-sidebar-resize-handle" class="sb-sidebar-resize-handle"></div>
-        <div class="sb-sidebar-header">&#x1F3B5; Soundboard</div>
-        <div class="sb-sidebar-body">
-          <input type="text" id="sb-sidebar-search" placeholder="Search sounds..." class="settings-text-input" style="width:100%;box-sizing:border-box;font-size:12px">
-          <div id="sb-sidebar-grid" class="soundboard-grid sidebar-mode"></div>
         </div>
       </aside>
 

@@ -2480,6 +2480,7 @@ _setupResizableSidebars() {
       let w = startW + (e.clientX - startX) * factor;
       w = Math.max(200, Math.min(400, w));
       rightSidebar.style.width = w + 'px';
+      window._updateSbToggleRight?.(); // keep both collapse btns aligned during drag
     });
     document.addEventListener('mouseup', () => {
       if (!dragging) return;

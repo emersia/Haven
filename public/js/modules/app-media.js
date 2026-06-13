@@ -571,17 +571,22 @@ _setupSoundManagement() {
     }
     // Clear any stale hidden state
     localStorage.removeItem('haven_sb_sidebar_hidden');
-    // Define the helper now (app-ui and app-admin will also call it)
-    // Soundboard is now the RIGHTMOST panel. The soundboard toggle btn stays at
-    // CSS right:0 always. When the soundboard panel is open, the voice/users
-    // collapse btn needs to shift left so it sits on the left edge of the
-    // soundboard panel (= the right edge of the voice/users panel).
+    // Define the helper now (app-ui and app-admin will also call it).
+    // Layout is: ... | main | sb-panel | right-sidebar (voice/users)
+    // - Voice/users toggle btn sits at the LEFT edge of right-sidebar (right:width-of-voice when open, right:0 when collapsed).
+    // - Soundboard toggle btn sits at the LEFT edge of sb-panel, which is also offset by voice width.
+    // Both buttons are staggered vertically in CSS so they never visually collide when both end up at right:0.
     window._updateSbToggleRight = () => {
-      const panel = document.getElementById('sb-sidebar-panel');
-      const isOpen = panel && !panel.classList.contains('sb-hidden');
-      const sbWidth = isOpen ? (parseInt(panel.style.width) || 220) : 0;
-      const voiceBtn = document.getElementById('sidebar-toggle-btn');
-      if (voiceBtn) voiceBtn.style.right = sbWidth + 'px';
+      const sbPanel    = document.getElementById('sb-sidebar-panel');
+      const rightSb    = document.getElementById('right-sidebar');
+      const voiceBtn   = document.getElementById('sidebar-toggle-btn');
+      const sbBtn      = document.getElementById('sb-sidebar-toggle-btn');
+      const sbOpen     = sbPanel && !sbPanel.classList.contains('sb-hidden');
+      const voiceOpen  = rightSb && !rightSb.classList.contains('collapsed');
+      const sbWidth    = sbOpen ? (parseInt(sbPanel.style.width) || sbPanel.offsetWidth || 220) : 0;
+      const voiceWidth = voiceOpen ? (parseInt(rightSb.style.width) || rightSb.offsetWidth || 240) : 0;
+      if (voiceBtn) voiceBtn.style.right = voiceWidth + 'px';
+      if (sbBtn)    sbBtn.style.right    = (voiceWidth + sbWidth) + 'px';
     };
     window._updateSbToggleRight();
   }
@@ -709,22 +714,54 @@ _toggleSoundboardSidebar() {
 _renderSoundboardSidebar(filter = '') {
   const grid = document.getElementById('sb-sidebar-grid');
   if (!grid) return;
-  let sounds = (this.customSounds || []).filter(s =>
+  const all = (this.customSounds || []).filter(s =>
     (!filter || s.name.toLowerCase().includes(filter.toLowerCase())) &&
     (!this._soundPrefs[s.name]?.hidden || this._showHiddenSounds)
   );
   const hotkeyMap = {};
   Object.entries(this._soundHotkeys).forEach(([hk, name]) => { hotkeyMap[name] = hk; });
-  const html = sounds.length === 0
-    ? `<p class="muted-text">${filter ? 'No matching sounds' : 'No sounds available'}</p>`
-    : sounds.map(s => {
-        const hk = hotkeyMap[s.name];
-        const hotkeyHtml = hk ? `<span class="sb-hotkey">${this._escapeHtml(hk)}</span>` : '';
-        return `<button class="soundboard-btn${this._soundPrefs[s.name]?.hidden ? ' hidden-sound' : ''}" data-name="${this._escapeHtml(s.name)}" data-url="${this._escapeHtml(s.url)}"><span class="sb-name">${this._escapeHtml(s.name)}</span>${hotkeyHtml}</button>`;
-      }).join('');
-  grid.innerHTML = html;
+
+  if (all.length === 0) {
+    grid.innerHTML = `<p class="muted-text">${filter ? 'No matching sounds' : 'No sounds available'}</p>`;
+    return;
+  }
+
+  // Split into custom (user-uploaded) and built-in groups. Custom always shows first.
+  const customSounds  = all.filter(s => !s.builtin);
+  const builtinSounds = all.filter(s =>  s.builtin);
+
+  const renderBtn = (s) => {
+    const hk = hotkeyMap[s.name];
+    const hotkeyHtml = hk ? `<span class="sb-hotkey">${this._escapeHtml(hk)}</span>` : '';
+    return `<button class="soundboard-btn${this._soundPrefs[s.name]?.hidden ? ' hidden-sound' : ''}" data-name="${this._escapeHtml(s.name)}" data-url="${this._escapeHtml(s.url)}"><span class="sb-name">${this._escapeHtml(s.name)}</span>${hotkeyHtml}</button>`;
+  };
+
+  // Persisted open/closed state for each group (default: both open).
+  const customOpen  = localStorage.getItem('haven_sb_sidebar_custom_open')  !== '0';
+  const builtinOpen = localStorage.getItem('haven_sb_sidebar_builtin_open') !== '0';
+
+  const renderGroup = (label, sounds, openKey, isOpen) => {
+    if (sounds.length === 0) return '';
+    return `
+      <details class="sb-sidebar-group" data-open-key="${openKey}"${isOpen ? ' open' : ''}>
+        <summary class="sb-sidebar-group-label">${label} <span class="sb-sidebar-group-count">${sounds.length}</span></summary>
+        <div class="sb-sidebar-group-body">${sounds.map(renderBtn).join('')}</div>
+      </details>
+    `;
+  };
+
+  grid.innerHTML =
+    renderGroup('Custom',  customSounds,  'haven_sb_sidebar_custom_open',  customOpen) +
+    renderGroup('Built-in', builtinSounds, 'haven_sb_sidebar_builtin_open', builtinOpen);
+
   grid.querySelectorAll('.soundboard-btn').forEach(btn => {
     btn.addEventListener('click', () => this._playSoundFile(btn.dataset.url));
+  });
+  // Persist open/closed state of each category.
+  grid.querySelectorAll('details.sb-sidebar-group').forEach(d => {
+    d.addEventListener('toggle', () => {
+      localStorage.setItem(d.dataset.openKey, d.open ? '1' : '0');
+    });
   });
 },
 

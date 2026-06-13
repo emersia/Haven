@@ -4767,7 +4767,7 @@ select.cfn-select.cfn-input {
 .sound-assign-list { display: flex; flex-direction: column; gap: 4px; }
 .sound-assign-select { min-width: 140px; }
 
-/*/* Sidebar layout mode for soundboard (used by the sidebar panel grid only) */
+/* Sidebar layout mode for soundboard (used by the sidebar panel grid only) */
 .soundboard-grid.sidebar-mode {
   display: flex !important; 
   flex-direction: column;
@@ -4805,15 +4805,34 @@ select.cfn-select.cfn-input {
   font-size: 13px;
 }
 .soundboard-btn.hidden-sound { opacity: 0.4; }
+/* Eye (hide/unhide) toggle on each tile. Always rendered with a reserved
+   width and at low opacity so it never shifts the tile contents on hover. */
 .soundboard-btn .sb-hide-btn {
-  font-size: 11px; color: var(--text-muted); cursor: pointer;
-  padding: 2px 4px; border-radius: 2px;
-  visibility: hidden; /* always takes space, no layout shift */
-  transition: color 0.15s; margin-left: auto; flex-shrink: 0;
+  font-size: 11px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 2px;
+  width: 18px;
+  height: 18px;
+  line-height: 14px;
+  text-align: center;
+  opacity: 0.35;
+  transition: opacity 0.15s, color 0.15s;
+  margin-left: auto;
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
-.soundboard-btn:hover .sb-hide-btn { visibility: visible; }
-.soundboard-btn .sb-hide-btn:hover { color: var(--danger); }
- Hotkey recording visual */
+.soundboard-btn:hover .sb-hide-btn { opacity: 1; }
+.soundboard-btn .sb-hide-btn:hover { color: var(--danger); opacity: 1; }
+/* Hidden tile: the eye icon is the only way back in, so keep it fully visible. */
+.soundboard-btn.hidden-sound .sb-hide-btn { opacity: 1; }
+/* In tile layout the eye sits at the top-right corner without affecting flex flow */
+.soundboard-grid:not(.list-mode):not(.sidebar-mode) .soundboard-btn { position: relative; }
+.soundboard-grid:not(.list-mode):not(.sidebar-mode) .soundboard-btn .sb-hide-btn {
+  position: absolute; top: 4px; right: 4px; margin: 0;
+}
+/* Hotkey recording visual */
 .hotkey-recording { animation: hotkey-pulse 0.6s ease infinite alternate; }
 @keyframes hotkey-pulse { from { box-shadow: 0 0 0 2px var(--accent-glow); } to { box-shadow: 0 0 8px 4px var(--accent-glow); } }
 
@@ -11884,7 +11903,7 @@ video:-webkit-full-screen {
   }
 }
 
-/* ── Soundboard Sidebar (in-flow flex child, sits left of voice/users sidebar) ── */
+/* ── Soundboard Sidebar (twin panel, sits directly LEFT of voice/users sidebar) ── */
 .sb-sidebar-panel {
   width: 220px;
   min-width: 220px;
@@ -11905,6 +11924,8 @@ video:-webkit-full-screen {
   opacity: 0;
   pointer-events: none;
 }
+/* When the soundboard panel is open it shares an edge with the voice/users
+   panel's existing border-left, so no extra border-right is required. */
 /* Resize handle on the left edge */
 .sb-sidebar-resize-handle {
   position: absolute;
@@ -11948,11 +11969,50 @@ video:-webkit-full-screen {
   max-height: none;
   overflow-y: auto;
 }
-/* Soundboard sidebar toggle button — fixed, always at the far right edge */
+/* Collapsible category groups inside the soundboard sidebar */
+.sb-sidebar-group { margin-bottom: 6px; }
+.sb-sidebar-group-label {
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.72em;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text-muted);
+  padding: 4px 2px;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sb-sidebar-group-label::-webkit-details-marker { display: none; }
+.sb-sidebar-group-label::before {
+  content: '\25BE'; /* small down triangle */
+  font-size: 9px;
+  transition: transform 0.15s;
+  display: inline-block;
+}
+.sb-sidebar-group:not([open]) > .sb-sidebar-group-label::before {
+  transform: rotate(-90deg);
+}
+.sb-sidebar-group-count {
+  margin-left: auto;
+  font-size: 0.85em;
+  opacity: 0.7;
+  font-weight: 600;
+}
+.sb-sidebar-group-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 2px;
+}
+/* Soundboard sidebar toggle button — fixed; sits at the LEFT edge of the
+   soundboard panel (which is directly LEFT of the voice/users panel).
+   JS keeps `right` synced with the combined width of voice + soundboard. */
 .sb-sidebar-toggle-btn {
   position: fixed;
-  right: 0;           /* stays at right:0; panel is rightmost so this is always correct */
-  top: 114px;         /* just below the voice/users collapse btn at 72px */
+  right: 0;           /* JS recalculates on mount + resize/collapse events */
+  top: 114px;         /* staggered below the voice/users collapse btn at 72px */
   transform: none;
   width: 20px;
   height: 36px;
