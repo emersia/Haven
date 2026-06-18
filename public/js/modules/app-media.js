@@ -20,38 +20,75 @@ _queueImage(file) {
 _renderImageQueue() {
   const bar = document.getElementById('image-queue-bar');
   if (!bar) return;
-  if (!this._imageQueue || this._imageQueue.length === 0) {
+  const hasImages = this._imageQueue && this._imageQueue.length > 0;
+  const hasFiles  = this._fileQueue  && this._fileQueue.length  > 0;
+  if (!hasImages && !hasFiles) {
     bar.style.display = 'none';
     bar.innerHTML = '';
     return;
   }
   bar.style.display = 'flex';
   bar.innerHTML = '';
-  this._imageQueue.forEach((file, idx) => {
-    const thumb = document.createElement('div');
-    thumb.className = 'image-queue-thumb';
-    const img = document.createElement('img');
-    img.src = URL.createObjectURL(file);
-    img.alt = file.name;
-    img.onload = () => URL.revokeObjectURL(img.src);
-    const removeBtn = document.createElement('button');
-    removeBtn.className = 'image-queue-remove';
-    removeBtn.title = 'Remove';
-    removeBtn.textContent = '×';
-    removeBtn.addEventListener('click', () => {
-      this._imageQueue.splice(idx, 1);
-      this._renderImageQueue();
+  if (hasImages) {
+    this._imageQueue.forEach((file, idx) => {
+      const thumb = document.createElement('div');
+      thumb.className = 'image-queue-thumb';
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(file);
+      img.alt = file.name;
+      img.onload = () => URL.revokeObjectURL(img.src);
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'image-queue-remove';
+      removeBtn.title = 'Remove';
+      removeBtn.textContent = '×';
+      removeBtn.addEventListener('click', () => {
+        this._imageQueue.splice(idx, 1);
+        this._renderImageQueue();
+      });
+      thumb.appendChild(img);
+      thumb.appendChild(removeBtn);
+      bar.appendChild(thumb);
     });
-    thumb.appendChild(img);
-    thumb.appendChild(removeBtn);
-    bar.appendChild(thumb);
-  });
-  // Add a "clear all" button if multiple
-  if (this._imageQueue.length > 1) {
+  }
+  if (hasFiles) {
+    this._fileQueue.forEach((file, idx) => {
+      const chip = document.createElement('div');
+      chip.className = 'file-queue-chip';
+      chip.title = file.name + ' — ' + this._formatFileSize(file.size);
+      const icon = document.createElement('span');
+      icon.className = 'file-queue-chip-icon';
+      icon.textContent = '📎';
+      const name = document.createElement('span');
+      name.className = 'file-queue-chip-name';
+      name.textContent = file.name;
+      const size = document.createElement('span');
+      size.className = 'file-queue-chip-size';
+      size.textContent = this._formatFileSize(file.size);
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'image-queue-remove';
+      removeBtn.title = 'Remove';
+      removeBtn.textContent = '×';
+      removeBtn.addEventListener('click', () => {
+        this._fileQueue.splice(idx, 1);
+        this._renderImageQueue();
+      });
+      chip.appendChild(icon);
+      chip.appendChild(name);
+      chip.appendChild(size);
+      chip.appendChild(removeBtn);
+      bar.appendChild(chip);
+    });
+  }
+  // Add a "clear all" button if there's more than one queued attachment in total
+  const totalQueued = (hasImages ? this._imageQueue.length : 0) + (hasFiles ? this._fileQueue.length : 0);
+  if (totalQueued > 1) {
     const clearAll = document.createElement('button');
     clearAll.className = 'image-queue-clear-all';
     clearAll.textContent = 'Clear All';
-    clearAll.addEventListener('click', () => this._clearImageQueue());
+    clearAll.addEventListener('click', () => {
+      this._clearImageQueue();
+      this._clearFileQueue();
+    });
     bar.appendChild(clearAll);
   }
 },
@@ -67,6 +104,44 @@ async _flushImageQueue(bundled = false, personaPrefix = '') {
   this._clearImageQueue();
   for (const file of files) {
     await this._uploadImage(file, undefined, bundled, personaPrefix);
+  }
+},
+
+// ── General file queue (non-image attachments) — (#5417) ──
+// Mirrors _imageQueue so non-image attachments get a remove-able preview
+// chip in the same bar instead of uploading instantly on selection.
+_queueGeneralFile(file) {
+  if (!file) return;
+  const code = this.currentChannel;
+  if (!code) return this._showToast(t('media.select_channel_first'), 'error');
+  const _ch = this.channels.find(c => c.code === code);
+  if (_ch && _ch.media_enabled === 0) {
+    return this._showToast(t('media.uploads_disabled'), 'error');
+  }
+  const maxMb = parseInt(this.serverSettings?.max_upload_mb) || 25;
+  if (file.size > maxMb * 1024 * 1024) {
+    return this._showToast(t('media.file_too_large', { maxMb }), 'error');
+  }
+  if (!this._fileQueue) this._fileQueue = [];
+  if (this._fileQueue.length >= 5) {
+    return this._showToast('Max 5 files at once', 'error');
+  }
+  this._fileQueue.push(file);
+  this._renderImageQueue();
+  document.getElementById('message-input')?.focus();
+},
+
+_clearFileQueue() {
+  this._fileQueue = [];
+  this._renderImageQueue();
+},
+
+async _flushFileQueue() {
+  if (!this._fileQueue || this._fileQueue.length === 0) return;
+  const files = [...this._fileQueue];
+  this._clearFileQueue();
+  for (const file of files) {
+    this._uploadGeneralFile(file);
   }
 },
 
@@ -345,7 +420,7 @@ async _commitAvatarSettings() {
 
   } catch (err) {
     console.error('[Avatar] Save failed:', err);
-    if (status) { status.textContent = 'âŒ ' + err.message; status.style.color = 'var(--danger, red)'; }
+    if (status) { status.textContent = '❌ ' + err.message; status.style.color = 'var(--danger, red)'; }
     this._showToast('Failed to save: ' + err.message, 'error');
   }
 },
@@ -663,8 +738,13 @@ _buildHotkeyString(e) {
 _openSoundModal(tab = 'soundboard') {
   const modal = document.getElementById('sound-modal');
   if (!modal) return;
-  // If soundboard is already popped out, bring it into focus rather than reopening the modal
-  if (this._soundboardPip) {
+  // If the soundboard is already popped out AND the caller wants the soundboard
+  // tab, bring the PiP into focus instead of reopening the modal. For 'assign'
+  // and 'manage' tabs we still open the modal — the popout only holds the
+  // soundboard view, so other tabs would otherwise be unreachable while
+  // popped out (#5419, including the admin Custom Sounds button which goes
+  // through this path with tab='manage').
+  if (this._soundboardPip && tab === 'soundboard') {
     this._soundboardPip.style.zIndex = '10001';
     setTimeout(() => { if (this._soundboardPip) this._soundboardPip.style.zIndex = '10000'; }, 400);
     return;
@@ -690,6 +770,109 @@ _openSoundModal(tab = 'soundboard') {
   if (popoutBtn) { popoutBtn.textContent = '\u29c9'; popoutBtn.title = 'Pop out soundboard'; }
   this._renderSoundboard();
   this._renderAssignTab();
+},
+
+// ── Custom dropdown wrapper for native <select> elements (#5418) ──
+// Native <select> popups render outside the Haven window and can't be
+// constrained or styled. This wraps a select with a custom display + panel
+// that lives inside the modal, scrolls when long, and stays inside bounds.
+_enhanceSelectAsCustom(selectEl) {
+  if (!selectEl) return;
+  // Re-entry path: rebuild options from the underlying <select>.
+  if (selectEl.dataset.customEnhanced === '1') {
+    const wrap = selectEl.parentElement;
+    if (wrap && wrap._csRebuild) wrap._csRebuild();
+    return;
+  }
+  selectEl.dataset.customEnhanced = '1';
+
+  const wrap = document.createElement('div');
+  wrap.className = 'custom-select-wrap ' + (selectEl.className || '');
+  wrap.style.position = 'relative';
+  selectEl.parentNode.insertBefore(wrap, selectEl);
+  wrap.appendChild(selectEl);
+  selectEl.style.display = 'none';
+
+  const display = document.createElement('button');
+  display.type = 'button';
+  display.className = 'custom-select-display';
+  display.innerHTML = '<span class="custom-select-label"></span><span class="custom-select-caret">▾</span>';
+  wrap.appendChild(display);
+
+  const panel = document.createElement('div');
+  panel.className = 'custom-select-panel';
+  panel.style.display = 'none';
+  wrap.appendChild(panel);
+
+  const labelEl = display.querySelector('.custom-select-label');
+
+  const buildPanel = () => {
+    panel.innerHTML = '';
+    const addOption = (opt) => {
+      const item = document.createElement('div');
+      item.className = 'custom-select-option';
+      item.textContent = opt.textContent;
+      item.dataset.value = opt.value;
+      if (opt.value === selectEl.value) item.classList.add('selected');
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectEl.value = opt.value;
+        selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+        syncLabel();
+        panel.style.display = 'none';
+      });
+      panel.appendChild(item);
+    };
+    Array.from(selectEl.children).forEach(child => {
+      if (child.tagName === 'OPTGROUP') {
+        const grp = document.createElement('div');
+        grp.className = 'custom-select-group-label';
+        grp.textContent = child.label;
+        panel.appendChild(grp);
+        Array.from(child.children).forEach(addOption);
+      } else if (child.tagName === 'OPTION') {
+        addOption(child);
+      }
+    });
+  };
+
+  const syncLabel = () => {
+    const opt = Array.from(selectEl.querySelectorAll('option')).find(o => o.value === selectEl.value);
+    labelEl.textContent = opt ? opt.textContent : '';
+  };
+
+  const openPanel = () => {
+    buildPanel();
+    panel.style.display = 'block';
+    // Position: prefer below; flip to above if not enough room.
+    const rect = display.getBoundingClientRect();
+    const modalContent = display.closest('.modal-content') || display.closest('.modal') || document.body;
+    const mc = modalContent.getBoundingClientRect();
+    const below = mc.bottom - rect.bottom;
+    const above = rect.top - mc.top;
+    const room = Math.max(120, Math.min(280, Math.max(below, above) - 16));
+    panel.style.maxHeight = room + 'px';
+    if (below < 160 && above > below) {
+      panel.classList.add('flip-up');
+    } else {
+      panel.classList.remove('flip-up');
+    }
+  };
+
+  display.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (panel.style.display === 'none') openPanel();
+    else panel.style.display = 'none';
+  });
+
+  const docClick = (e) => {
+    if (!wrap.contains(e.target)) panel.style.display = 'none';
+  };
+  document.addEventListener('click', docClick);
+
+  selectEl.addEventListener('change', syncLabel);
+  wrap._csRebuild = buildPanel;
+  syncLabel();
 },
 
 _closeSoundboardForVoiceLeave() {
@@ -1264,6 +1447,10 @@ _renderAssignTab() {
 
     // Sync with current notification setting
     sel.value = this.notifications.sounds[event] || 'none';
+    // Replace the native dropdown with a custom one constrained to the modal,
+    // so long sound lists don't render a native popup that overflows the
+    // Haven window (#5418 follow-up). Idempotent — re-renders sync the label.
+    this._enhanceSelectAsCustom?.(sel);
 
     // On change, update the main notification select + play preview
     sel.addEventListener('change', () => {
@@ -2490,180 +2677,4 @@ _setupModalExpand() {
       if (modal.dataset.modalControlsInjected === '1') return;
       modal.dataset.modalControlsInjected = '1';
 
-      // Settings/activities headers have their own close button — keep it
-      // but inject the expand toggle next to it.
-      const settingsClose = modal.querySelector('.settings-close-btn');
-
-      const expandBtn = document.createElement('button');
-      expandBtn.type = 'button';
-      expandBtn.className = 'modal-expand-btn';
-      expandBtn.title = 'Expand / Restore';
-      expandBtn.textContent = '⛶';
-      expandBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const isMax = modal.classList.toggle('modal-maximized');
-        expandBtn.textContent = isMax ? '⊖' : '⛶';
-        expandBtn.title = isMax ? 'Restore size' : 'Expand';
-      });
-
-      // When a settings-style header is present, slot the expand button
-      // directly next to its close button so the two stay aligned on
-      // every viewport size. Otherwise drop both controls into a floating
-      // group at the top-right of the modal.
-      if (settingsClose) {
-        expandBtn.classList.add('modal-expand-btn-inline');
-        settingsClose.parentElement.insertBefore(expandBtn, settingsClose);
-      } else {
-        const group = document.createElement('div');
-        group.className = 'modal-controls';
-        group.appendChild(expandBtn);
-
-        const closeBtn = document.createElement('button');
-        closeBtn.type = 'button';
-        closeBtn.className = 'modal-expand-btn';
-        closeBtn.title = 'Close';
-        closeBtn.textContent = '✕';
-        closeBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const overlay = modal.closest('.modal-overlay');
-          if (overlay) overlay.style.display = 'none';
-          if (modal.classList.contains('modal-maximized')) {
-            modal.classList.remove('modal-maximized');
-            expandBtn.textContent = '⛶';
-            expandBtn.title = 'Expand / Restore';
-          }
-        });
-        group.appendChild(closeBtn);
-        modal.appendChild(group);
-      }
-    });
-  };
-  _injectModalControls();
-  // Re-run if new modals get inserted later (some plugins/lazy templates)
-  this._injectModalControls = _injectModalControls;
-},
-
-/** Show a custom image context menu (Save / Copy / Open in tab) */
-_showImageContextMenu(e, src) {
-  this._hideImageContextMenu();
-  const menu = document.createElement('div');
-  menu.id = 'image-context-menu';
-  menu.className = 'image-context-menu';
-  menu.innerHTML = `
-    <button data-action="save">💾 Save Image</button>
-    <button data-action="copy">📋 Copy Image</button>
-    <button data-action="open">🔗 Open in New Tab</button>
-  `;
-  menu.style.left = e.clientX + 'px';
-  menu.style.top = e.clientY + 'px';
-  document.body.appendChild(menu);
-  // Clamp to viewport
-  const rect = menu.getBoundingClientRect();
-  if (rect.right > window.innerWidth) menu.style.left = (window.innerWidth - rect.width - 8) + 'px';
-  if (rect.bottom > window.innerHeight) menu.style.top = (window.innerHeight - rect.height - 8) + 'px';
-
-  menu.addEventListener('click', async (ev) => {
-    const action = ev.target.dataset.action;
-    if (action === 'save') {
-      const a = document.createElement('a');
-      a.href = src;
-      a.download = src.split('/').pop().split('?')[0] || 'image';
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    } else if (action === 'copy') {
-      // Hide the menu immediately so it doesn't sit on screen during
-      // the async fetch + clipboard write. We still control the toast.
-      this._hideImageContextMenu();
-      (async () => {
-        const fetchAsBlob = async () => {
-          const resp = await fetch(src, { credentials: 'same-origin' });
-          if (!resp.ok) throw new Error('fetch ' + resp.status);
-          return await resp.blob();
-        };
-        const toPngBlob = async (blob) => {
-          if (blob.type === 'image/png') return blob;
-          const bitmap = await createImageBitmap(blob);
-          const canvas = document.createElement('canvas');
-          canvas.width = bitmap.width;
-          canvas.height = bitmap.height;
-          canvas.getContext('2d').drawImage(bitmap, 0, 0);
-          return await new Promise((res, rej) =>
-            canvas.toBlob(b => b ? res(b) : rej(new Error('toBlob null')), 'image/png'));
-        };
-        const blobToDataUrl = (blob) => new Promise((res, rej) => {
-          const r = new FileReader();
-          r.onload = () => res(r.result);
-          r.onerror = () => rej(r.error || new Error('FileReader failed'));
-          r.readAsDataURL(blob);
-        });
-
-        // Strategy 1: Electron desktop IPC (most reliable — main process
-        // clipboard has no user-gesture requirement).
-        if (window.havenDesktop?.clipboardWriteImage) {
-          try {
-            const blob = await fetchAsBlob();
-            const png = await toPngBlob(blob);
-            const dataUrl = await blobToDataUrl(png);
-            const res = await window.havenDesktop.clipboardWriteImage(dataUrl);
-            if (res?.ok) { this._showToast('Image copied to clipboard', 'success'); return; }
-            console.warn('[Haven] IPC clipboard write failed:', res?.reason);
-          } catch (err) {
-            console.warn('[Haven] IPC clipboard path errored:', err);
-          }
-        }
-
-        // Strategy 2: web navigator.clipboard.write with promise-based
-        // ClipboardItem (preserves gesture chain across async fetch).
-        try {
-          if (typeof ClipboardItem === 'undefined' || !navigator.clipboard?.write) {
-            throw new Error('Clipboard API unavailable');
-          }
-          const blobPromise = (async () => toPngBlob(await fetchAsBlob()))();
-          await navigator.clipboard.write([
-            new ClipboardItem({ 'image/png': blobPromise })
-          ]);
-          this._showToast('Image copied to clipboard', 'success');
-          return;
-        } catch (err) {
-          console.error('[Haven] Web clipboard.write failed:', err);
-          // Strategy 3: at least put the URL on the clipboard so the
-          // user has something to paste.
-          try {
-            await navigator.clipboard.writeText(src);
-            this._showToast('Copied image URL (browser blocked image copy)', 'warning');
-            return;
-          } catch (err2) {
-            console.error('[Haven] writeText fallback failed:', err2);
-            this._showToast('Failed to copy image: ' + (err.message || err), 'error');
-          }
-        }
-      })();
-      return;
-    } else if (action === 'open') {
-      window.open(src, '_blank', 'noopener,noreferrer');
-    }
-    this._hideImageContextMenu();
-  });
-
-  // Close on click elsewhere
-  const closer = (ev) => {
-    if (!menu.contains(ev.target)) {
-      this._hideImageContextMenu();
-      document.removeEventListener('click', closer, true);
-      document.removeEventListener('contextmenu', closer, true);
-    }
-  };
-  setTimeout(() => {
-    document.addEventListener('click', closer, true);
-    document.addEventListener('contextmenu', closer, true);
-  }, 0);
-},
-
-_hideImageContextMenu() {
-  const existing = document.getElementById('image-context-menu');
-  if (existing) existing.remove();
-},
-
-};
+      // Settings/activities headers have their own close button �

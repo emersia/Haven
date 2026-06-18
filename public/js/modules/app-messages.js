@@ -231,6 +231,8 @@ async _sendMessage() {
       }
     }
     this._flushImageQueue(!!content, personaPrefix);
+    // Non-image attachments queued via _queueGeneralFile (#5417) flush here too.
+    this._flushFileQueue?.();
   }
 },
 
@@ -1656,9 +1658,4 @@ _initMoveMessages() {
 
   // Close modal on overlay click
   const modal = document.getElementById('move-msg-modal');
-  if (modal) modal.addEventListener('click', (e) => {
-    if (e.target === modal) modal.style.display = 'none';
-  });
-},
-
-};
+  if (modal) moda

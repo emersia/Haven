@@ -8264,12 +8264,130 @@ html:not([data-toolbaricons="emoji"]):not([data-toolbaricons="color"]) .tb-icon-
   transition: opacity 0.15s;
 }
 
-.image-queue-thumb:hover .image-queue-remove {
+.image-queue-thumb:hover .image-queue-remove,
+.file-queue-chip:hover .image-queue-remove {
   opacity: 1;
 }
 
 .image-queue-remove:hover {
   background: var(--danger);
+}
+
+/* Custom dropdown wrapper for native <select> (#5418).
+   Replaces the native popup so the dropdown stays inside the Haven window
+   and scrolls when the option list is long. */
+.custom-select-wrap {
+  display: inline-block;
+  vertical-align: middle;
+  min-width: 140px;
+}
+.custom-select-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 10px;
+  background: var(--bg-input, var(--bg-secondary));
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+.custom-select-display:hover { border-color: var(--accent); }
+.custom-select-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.custom-select-caret {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  flex-shrink: 0;
+}
+.custom-select-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+  overflow-y: auto;
+  z-index: 1100;
+  padding: 4px;
+}
+.custom-select-panel.flip-up {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+.custom-select-group-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+  padding: 6px 8px 2px;
+}
+.custom-select-option {
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.custom-select-option:hover { background: var(--bg-tertiary); }
+.custom-select-option.selected {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* File queue chip — non-image attachments queued before send (#5417) */
+.file-queue-chip {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 220px;
+  height: 36px;
+  padding: 0 28px 0 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  font-size: 0.78rem;
+  flex-shrink: 0;
+  transition: border-color 0.15s;
+}
+.file-queue-chip:hover {
+  border-color: var(--accent);
+}
+.file-queue-chip-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+.file-queue-chip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+.file-queue-chip-size {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  flex-shrink: 0;
+}
+.file-queue-chip .image-queue-remove {
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
 }
 
 .image-queue-clear-all {
@@ -16840,88 +16958,4 @@ ul.chat-list { list-style-type: disc; }
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  background: var(--bg-tertiary, var(--bg-secondary));
-  color: var(--text-muted);
-  font-size: 0.66rem;
-  padding: 1px 6px;
-  border-radius: 8px;
-  margin-left: 6px;
-  font-weight: 500;
-  letter-spacing: .01em;
-}
-.persona-msg-badge::before { content: "🎭"; font-size: 0.7rem; }
-.persona-msg-realname {
-  font-size: 0.68rem;
-  color: var(--text-muted);
-  margin-left: 4px;
-  opacity: .65;
-}
-
-/* Jump button overlaid on photo/video gallery tiles (#5350 follow-up) */
-.media-grid-item .media-grid-jump {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.6);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.78rem;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity .12s, background .12s;
-  z-index: 2;
-}
-.media-grid-item:hover .media-grid-jump,
-.media-grid-item:focus-within .media-grid-jump { opacity: 1; }
-.media-grid-item .media-grid-jump:hover { background: rgba(0, 0, 0, 0.85); }
-
-/* Video lightbox player (sits above modals like the image lightbox does) */
-#video-lightbox .lightbox-video {
-  max-width: 92vw;
-  max-height: 92vh;
-  border-radius: 6px;
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
-  background: #000;
-  outline: none;
-}
-
-/* -- Header icon-button monochrome / colorful sync (#5350 follow-up) --
-   The "Colorful Emoji" / "Monochrome" toolbar setting controls message
-   action bar icons via data-toolbaricons. Apply the same setting to the
-   emoji-bearing top-bar buttons (search, pinned, gallery, copy, etc.) so
-   the user's choice covers every set of icon buttons in the app. */
-:root[data-toolbaricons="mono"] .header-actions-box .icon-btn,
-html[data-toolbaricons="mono"] .header-actions-box .icon-btn,
-:root:not([data-toolbaricons="emoji"]):not([data-toolbaricons="color"]) .header-actions-box .icon-btn,
-html:not([data-toolbaricons="emoji"]):not([data-toolbaricons="color"]) .header-actions-box .icon-btn {
-  filter: grayscale(1);
-}
-:root[data-toolbaricons="emoji"] .header-actions-box .icon-btn,
-html[data-toolbaricons="emoji"] .header-actions-box .icon-btn,
-:root[data-toolbaricons="color"] .header-actions-box .icon-btn,
-html[data-toolbaricons="color"] .header-actions-box .icon-btn {
-  filter: none;
-}
-
-/* Persona dropdown avatar (>>name autocomplete) */
-.persona-dd-avatar {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  object-fit: cover;
-  margin-right: 6px;
-  vertical-align: middle;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.7rem;
-  background: var(--bg-tertiary, var(--bg-secondary));
-  color: var(--text-muted);
-  overflow: hidden;
-}
+  background: var(--bg-tertiary,

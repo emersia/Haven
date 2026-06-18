@@ -4909,12 +4909,13 @@ _setupImageUpload() {
     if (file.type.startsWith('image/')) {
       this._queueImage(file);
     } else {
-      this._uploadGeneralFile(file);
+      this._queueGeneralFile(file);
     }
     fileInput.value = '';
   });
 
-  // Paste from clipboard — images (incl. SVG) get queued for preview; other files go to general upload
+  // Paste from clipboard — images (incl. SVG) get queued for preview; non-image
+  // files now also queue (#5417) rather than uploading on paste.
   document.getElementById('message-input').addEventListener('paste', (e) => {
     const items = e.clipboardData?.items;
     if (!items) return;
@@ -4927,7 +4928,7 @@ _setupImageUpload() {
       if (item.kind === 'file') {
         e.preventDefault();
         const file = item.getAsFile();
-        if (file) this._uploadGeneralFile(file);
+        if (file) this._queueGeneralFile(file);
         return;
       }
     }
@@ -4951,7 +4952,7 @@ _setupImageUpload() {
     if (file.type.startsWith('image/')) {
       this._queueImage(file);
     } else {
-      this._uploadGeneralFile(file);
+      this._queueGeneralFile(file);
     }
   });
 },
@@ -6316,9 +6317,4 @@ _showPersonaEditor(id) {
       editor.remove();
       this._renderPersonasList();
     } catch (err) {
-      this._showToast?.(err.message || 'Save failed', 'error');
-    }
-  });
-},
-
-};
+      this._showToast?.(err.message || 'Sav
