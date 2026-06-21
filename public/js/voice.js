@@ -2022,12 +2022,21 @@ class VoiceManager {
       || this.screenGainNodes.get(Number(userId));
     const clampedGain = Math.max(0, Math.min(2, volume));
     const clampedVol  = Math.max(0, Math.min(1, volume));
-    if (gainNode) {
-      gainNode.gain.value = clampedGain;
-    }
-    // Always sync the underlying <audio> element too (belt-and-suspenders)
     const audioEl = document.getElementById(`voice-audio-screen-${userId}`);
-    if (audioEl) audioEl.volume = clampedVol;
+    if (gainNode) {
+      // The Web Audio graph is the active output for this stream. Drive volume
+      // through the gain node and keep the <audio> element muted — if we let the
+      // element play too, the screen audio comes out of BOTH the gain node and
+      // the element at once, which is the "screen audio duplicates" report. The
+      // old "belt-and-suspenders" element sync was the cause, not a safety net.
+      // (#5426)
+      gainNode.gain.value = clampedGain;
+      if (audioEl) audioEl.volume = 0;
+    } else if (audioEl) {
+      // No gain node (iOS / Web-Audio fallback path) — the element itself is
+      // the output, so volume rides on the element.
+      audioEl.volume = clampedVol;
+    }
   }
 
   _getSavedStreamVolume(userId) {
