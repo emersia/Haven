@@ -355,6 +355,13 @@ _setupUI() {
       }
     });
   });
+  // Hide channel (admin declutter — local only, channel stays accessible) (#5409)
+  document.querySelector('[data-action="hide-channel"]')?.addEventListener('click', () => {
+    const code = this._ctxMenuChannel;
+    if (!code) return;
+    this._closeChannelCtxMenu();
+    this._hideChannel(code);
+  });
   // Disconnect from voice via context menu
   document.querySelector('[data-action="leave-voice"]')?.addEventListener('click', () => {
     this._closeChannelCtxMenu();

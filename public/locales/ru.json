@@ -102,14 +102,6 @@
       "vibrancy": "Интенсивность",
       "effect_speed": "Скорость эффекта"
     },
-    "theme": {
-      "title": "Тема",
-      "effect_overlay": "Оверлей эффектов",
-      "close": "Закрыть",
-      "speed": "Скорость",
-      "vibrancy": "Интенсивность",
-      "effect_speed": "Скорость эффекта"
-    },
     "actions": {
       "logout": "Выйти",
       "change_display_name": "Изменить отображаемое имя",
@@ -206,7 +198,8 @@
     "no_music_playing": "Музыка не воспроизводится",
     "record_set": "{{user}} установил новый рекорд в {{game}}: {{score}}!",
     "burn_armed": "🔥 Секретный режим запущен — следующее сообщение самоуничтожится через 30 секунд после просмотра",
-    "burn_disarmed": "Секретный режим отключен"
+    "burn_disarmed": "Секретный режим отключен",
+    "channel_hidden": "Channel \"{{name}}\" hidden"
   },
   "messages": {
     "burn_reveal": "Нажмите для просмотра",
@@ -349,7 +342,12 @@
     "expand_collapse": "Развернуть/свернуть подканалы",
     "channel_options": "Параметры канала",
     "unknown_user": "Неизвестный",
-    "more_options": "Ещё параметры"
+    "more_options": "Ещё параметры",
+    "hidden_channels_count": "{{count}} hidden channels",
+    "hidden_channels_restore_title": "Show hidden channels",
+    "no_hidden_channels": "No hidden channels",
+    "show_all_hidden": "Show all",
+    "unhide_channel": "Unhide"
   },
   "channel": {
     "server_joined": "Код сервера принят — вы вошли в {{count}} канал(а/ов)",
@@ -1542,6 +1540,10 @@
       "desc": "Укажите целевой канал для переноса",
       "move_one": "Переместить {{n}} выделенное сообщение в:",
       "move_many": "Переместить {{n}} выделенных сообщений в:"
+    },
+    "hidden_channels": {
+      "title": "Hidden Channels",
+      "desc": "Hidden channels are removed from your sidebar but you still have full access to them. Unhide one to bring it back."
     }
   },
   "context_menu": {
@@ -1560,7 +1562,8 @@
       "functions": "Функционал и тумблеры канала",
       "roles": "Настройка локальных ролей",
       "webhooks": "Управление вебхуками",
-      "delete": "Безвозвратно удалить канал"
+      "delete": "Безвозвратно удалить канал",
+      "hide": "Hide Channel"
     },
     "dm": {
       "mute": "Заглушить уведомления ЛС",

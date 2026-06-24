@@ -198,7 +198,8 @@
     "no_music_playing": "No music playing",
     "record_set": "{{user}} set a new {{game}} record: {{score}}!",
     "burn_armed": "🔥 Burn-after-read armed — next message will self-destruct 30s after viewing",
-    "burn_disarmed": "Burn-after-read disabled"
+    "burn_disarmed": "Burn-after-read disabled",
+    "channel_hidden": "Channel \"{{name}}\" hidden"
   },
   "messages": {
     "burn_reveal": "Tap to view",
@@ -341,7 +342,12 @@
     "expand_collapse": "Expand/collapse sub-channels",
     "channel_options": "Channel options",
     "unknown_user": "Unknown",
-    "more_options": "More options"
+    "more_options": "More options",
+    "hidden_channels_count": "{{count}} hidden channels",
+    "hidden_channels_restore_title": "Show hidden channels",
+    "no_hidden_channels": "No hidden channels",
+    "show_all_hidden": "Show all",
+    "unhide_channel": "Unhide"
   },
   "channel": {
     "server_joined": "Server code accepted — joined {{count}} channel(s)",
@@ -1543,6 +1549,10 @@
       "desc": "Select a destination channel",
       "move_one": "Move {{n}} message to:",
       "move_many": "Move {{n}} messages to:"
+    },
+    "hidden_channels": {
+      "title": "Hidden Channels",
+      "desc": "Hidden channels are removed from your sidebar but you still have full access to them. Unhide one to bring it back."
     }
   },
   "context_menu": {
@@ -1561,7 +1571,8 @@
       "functions": "Channel Functions",
       "roles": "Roles",
       "webhooks": "Webhooks",
-      "delete": "Delete Channel"
+      "delete": "Delete Channel",
+      "hide": "Hide Channel"
     },
     "dm": {
       "mute": "Mute DM",

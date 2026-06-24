@@ -2914,6 +2914,7 @@
     <button class="channel-ctx-item" data-action="leave-voice" style="display:none">📴 <span data-i18n="context_menu.channel.disconnect_voice">Disconnect Voice</span></button>
     <hr class="channel-ctx-sep">
     <button class="channel-ctx-item" data-action="leave-channel">🚪 <span data-i18n="context_menu.channel.leave">Leave Channel</span></button>
+    <button class="channel-ctx-item" data-action="hide-channel" style="display:none">🙈 <span data-i18n="context_menu.channel.hide">Hide Channel</span></button>
     <hr class="channel-ctx-sep">
     <button class="channel-ctx-item mod-only" data-action="rename-channel">✏️ <span data-i18n="context_menu.channel.rename">Rename Channel</span></button>
     <button class="channel-ctx-item mod-only" data-action="create-sub-channel">📁 <span data-i18n="context_menu.channel.create_sub">Create Sub-channel</span></button>
@@ -3219,6 +3220,18 @@
       </div>
       <p class="modal-desc" style="margin:0 0 12px;font-size:0.8rem;opacity:0.6" data-i18n="modals.sub_panel.desc">Subscribe to get notifications. Unsubscribed channels still appear but won't notify you.</p>
       <div id="sub-panel-content" style="overflow-y:auto;flex:1;min-height:0"></div>
+    </div>
+  </div>
+
+  <!-- Hidden Channels Modal (admin declutter via "Hide Channel") -->
+  <div class="modal-overlay" id="hidden-channels-modal" style="display:none">
+    <div class="modal" style="width:460px;max-height:80vh;display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <h3 style="margin:0;flex:1">🙈 <span data-i18n="modals.hidden_channels.title">Hidden Channels</span></h3>
+        <button class="btn-sm" id="hidden-channels-close-btn" data-i18n="modals.common.close" style="font-size:1rem;padding:4px 10px">&times;</button>
+      </div>
+      <p class="modal-desc" style="margin:0 0 12px;font-size:0.8rem;opacity:0.6" data-i18n="modals.hidden_channels.desc">Hidden channels are removed from your sidebar but you still have full access to them. Unhide one to bring it back.</p>
+      <div id="hidden-channels-content" style="overflow-y:auto;flex:1;min-height:0"></div>
     </div>
   </div>
 
