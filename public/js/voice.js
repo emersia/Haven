@@ -1752,6 +1752,28 @@ class VoiceManager {
     }
   }
 
+  // (#5427) Proactive recovery sweep, called after a socket reconnect while
+  // still in voice. Only touches peers whose media path is actually broken
+  // ('failed'/'disconnected') — healthy connections are left completely alone,
+  // so this is safe to call defensively. Catches the case where ICE died
+  // during the socket outage but the connectionstatechange-driven auto-restart
+  // either hasn't fired yet or missed the event while we were disconnected.
+  _healPeerConnections() {
+    if (!this.inVoice) return;
+    for (const [userId, peer] of this.peers) {
+      const conn = peer && peer.connection;
+      if (!conn) continue;
+      const state = conn.connectionState;
+      const iceState = conn.iceConnectionState;
+      if (state === 'failed' || state === 'disconnected' ||
+          iceState === 'failed' || iceState === 'disconnected') {
+        console.warn('[Voice] post-reconnect heal: ICE-restarting broken peer', userId,
+          `(conn=${state}, ice=${iceState})`);
+        this._restartIce(userId, conn);
+      }
+    }
+  }
+
   // ── Volume Control ──────────────────────────────────────
 
   setVolume(userId, volume) {

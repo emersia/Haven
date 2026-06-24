@@ -198,6 +198,17 @@ _setupSocketListeners() {
       this.socket.emit('voice-rejoin', { code: this.voice.currentChannel });
       if (this.voice.isMuted) this.socket.emit('voice-mute-state', { code: this.voice.currentChannel, muted: true });
       if (this.voice.isDeafened) this.socket.emit('voice-deafen-state', { code: this.voice.currentChannel, deafened: true });
+      // (#5427) When the socket flaps (common on the web client behind certain
+      // proxies/browsers), this fast-path rejoin keeps the existing peer
+      // connections instead of rebuilding them — but if ICE silently died
+      // during the outage, some peers end up with no audio while others are
+      // fine. The auto-recovery on connectionstatechange can take up to 8s and
+      // can miss an event that fired while we were disconnected. Once signaling
+      // is back, proactively ICE-restart only the peers that are actually
+      // broken so audio comes back without a manual leave/rejoin.
+      setTimeout(() => {
+        if (this.socket?.connected) this.voice._healPeerConnections?.();
+      }, 1500);
     } else if (this.voice && this.voice._softLeftChannel) {
       // (#5347 v3.15.4) The socket dropped while we were in voice; _softLeave
       // tore down local audio but kept the channel intent. Re-init the mic
