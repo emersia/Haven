@@ -57,7 +57,7 @@ async switchChannel(code) {
     this._updateVoiceButtons(true);
     // If viewing a different channel from the one we're in voice in, show "Join Voice" instead of "Voice Active"
     if (this.voice.currentChannel !== code) {
-      const _canVoice = this.user?.isAdmin || this._hasPerm('use_voice');
+      const _canVoice = this.user?.isAdmin || this.user?.isGuest || this._hasPerm('use_voice');
       const indic = document.getElementById('voice-active-indicator');
       if (indic) indic.style.display = 'none';
       const _scJoinBtn = document.getElementById('voice-join-btn');
@@ -71,7 +71,7 @@ async switchChannel(code) {
   } else {
     // Show just the join button (not the indicator), but hide it for text-only channels or users without voice permission
     const _scJoinBtn = document.getElementById('voice-join-btn');
-    const _canVoice = this.user?.isAdmin || this._hasPerm('use_voice');
+    const _canVoice = this.user?.isAdmin || this.user?.isGuest || this._hasPerm('use_voice');
     if (_scJoinBtn) _scJoinBtn.style.display = (channel && channel.voice_enabled === 0) || !_canVoice ? 'none' : 'inline-flex';
     const indic = document.getElementById('voice-active-indicator');
     if (indic) indic.style.display = 'none';
@@ -448,7 +448,7 @@ _openChannelCtxMenu(code, btnEl) {
   const inVoice = this.voice && this.voice.inVoice;
   const inThisChannel = inVoice && this.voice.currentChannel === code;
   const isVoiceOff = ch && ch.voice_enabled === 0;
-  const _noVP = !this.user?.isAdmin && !this._hasPerm('use_voice');
+  const _noVP = !this.user?.isAdmin && !this.user?.isGuest && !this._hasPerm('use_voice');
   if (joinVoiceBtn) joinVoiceBtn.style.display = (inThisChannel || isVoiceOff || _noVP) ? 'none' : '';
   if (leaveVoiceBtn) leaveVoiceBtn.style.display = inVoice ? '' : 'none';
   // Position near the button
@@ -1850,7 +1850,7 @@ _renderChannels() {
     el.addEventListener('dblclick', () => {
       const _dblCh = this.channels.find(c => c.code === ch.code);
       if (_dblCh && _dblCh.voice_enabled === 0) return;
-      if (!this.user?.isAdmin && !this._hasPerm('use_voice')) return;
+      if (!this.user?.isAdmin && !this.user?.isGuest && !this._hasPerm('use_voice')) return;
       this.switchChannel(ch.code);
       setTimeout(() => this._joinVoice(), 300);
     });
