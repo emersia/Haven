@@ -1791,9 +1791,9 @@
         <div class="desktop-pref-row">
           <label class="toggle-row">
             <input type="checkbox" id="pref-debug-screen-audio-direct">
-            <span class="toggle-label" data-i18n="settings.debug_section.screen_audio_direct">Direct audio output for screen shares</span>
+            <span class="toggle-label" data-i18n="settings.debug_section.screen_audio_webaudio">Web Audio mixing for screen-share audio</span>
           </label>
-          <p class="settings-hint" data-i18n="settings.debug_section.screen_audio_direct_hint">Play incoming screen-share audio straight through the audio element instead of Haven's Web Audio mixer. The mixer powers the per-stream volume slider, but routing a relayed stream through it can cause stutter and audio/video desync when the connection runs over a TURN server (it's fine on a local network). Turn this on if a screen share's audio stutters or drifts out of sync. Per-stream volume still works from 0 to 100%; only the above-100% boost is unavailable in this mode. (#5426)</p>
+          <p class="settings-hint" data-i18n="settings.debug_section.screen_audio_webaudio_hint">By default Haven plays incoming screen-share audio straight through the audio element, which keeps it in sync with the video over a TURN/relay connection. Turn this on to route it through Haven's Web Audio mixer instead, which unlocks the per-stream volume boost above 100% but can cause audio stutter and audio/video desync over a relay (it's fine on a local network). Leave it off if a screen share's audio stutters or drifts out of sync. (#5426)</p>
         </div>
 
         <!-- Desktop-only debug setting: shown when running in Haven Desktop -->

@@ -2031,22 +2031,23 @@ class VoiceManager {
       this.screenGainNodes.delete(userId);
     }
 
-    // iOS Safari / WebKit: skip Web Audio routing for incoming screen audio
-    // — same WebKit bug as _playAudio above. Use native element playback
-    // so the captured system audio actually reaches the user's speaker.
+    // Native element playout is the DEFAULT for incoming screen-share audio.
+    // Routing a relayed remote stream through createMediaStreamSource → gain →
+    // destination fights WebRTC's adaptive jitter buffer (NetEq): the AudioCtx
+    // pulls at its own fixed clock while NetEq is busy adapting to relay jitter,
+    // so the two clocks drift apart. Over a TURN relay this builds up over a
+    // minute or two and then stutters/desyncs from the video continuously (LAN
+    // is jitter-free so it never shows there) — exactly the #5426 report. Native
+    // <audio> playout keeps NetEq in charge end to end, so it stays in sync.
     //
-    // Desktop/other browsers can also opt into native playout via the Debug
-    // toggle "Direct audio output for screen shares" (#5426). Routing a
-    // relayed remote stream through createMediaStreamSource fights WebRTC's
-    // adaptive jitter buffer (NetEq), which stutters and drifts out of sync
-    // with the video once the connection runs over a TURN relay (LAN is
-    // jitter-free so it's fine). Native element playout keeps NetEq in
-    // charge; the only cost is the 100–200% volume boost (0–100% still
-    // works because setStreamVolume drives the element when there's no gain
-    // node).
-    let _directScreenAudio = false;
-    try { _directScreenAudio = localStorage.getItem('screen_audio_direct') === '1'; } catch {}
-    if (_IS_IOS_WEBKIT || _directScreenAudio) {
+    // This used to be an opt-in Debug toggle that defaulted to the broken Web
+    // Audio path; it's now inverted. The Web Audio mixer is only needed for the
+    // >100% per-stream volume boost, so it's strictly opt-in via Settings →
+    // Debug ("Web Audio mixing for screen-share audio"). iOS/WebKit always uses
+    // native playout (createMediaStreamSource yields silence there).
+    let _useWebAudioScreen = false;
+    try { _useWebAudioScreen = localStorage.getItem('screen_audio_webaudio') === '1'; } catch {}
+    if (_IS_IOS_WEBKIT || !_useWebAudioScreen) {
       const savedVolume = Math.min(1, this._getSavedStreamVolume(userId));
       if (this.isDeafened) {
         audioEl.dataset.prevVolume = String(savedVolume);
@@ -2055,6 +2056,10 @@ class VoiceManager {
         audioEl.volume = savedVolume;
       }
       audioEl.play().catch(() => {});
+      // Native playout is now the default path, so still announce that this
+      // share has audio — this is what reveals the 🔊 badge and the per-stream
+      // volume controls on the tile. (#5426)
+      if (this.onScreenAudio) this.onScreenAudio(userId);
       return;
     }
 
@@ -2080,7 +2085,7 @@ class VoiceManager {
   }
 
   // Re-route every screen-share audio stream that's currently playing to match
-  // the current "Direct audio output for screen shares" debug setting, so
+  // the current "Web Audio mixing for screen-share audio" debug setting, so
   // flipping the toggle takes effect immediately instead of on the next
   // reshare. _playScreenAudio tears down any existing gain node and rebuilds
   // the correct path for the new setting. (#5426)

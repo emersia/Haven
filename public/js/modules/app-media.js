@@ -2341,17 +2341,19 @@ _setupDebugSection() {
     });
   }
 
-  // #5426 — play incoming screen-share audio straight through the <audio>
-  // element instead of the Web Audio mixer. The mixer's createMediaStreamSource
-  // node fights WebRTC's jitter buffer and stutters / desyncs over a TURN
-  // relay; native playout keeps NetEq in charge. Costs the >100% volume boost.
+  // #5426 — screen-share audio now plays straight through the <audio> element
+  // by default (NetEq stays in charge, so it stays in sync over a TURN relay).
+  // This opt-in toggle instead routes it through the Web Audio mixer, which
+  // unlocks the >100% per-stream volume boost but can stutter / desync over a
+  // relay — the same createMediaStreamSource-vs-jitter-buffer fight as before,
+  // just no longer the default.
   const sadCb = document.getElementById('pref-debug-screen-audio-direct');
   if (sadCb) {
-    try { sadCb.checked = localStorage.getItem('screen_audio_direct') === '1'; } catch {}
+    try { sadCb.checked = localStorage.getItem('screen_audio_webaudio') === '1'; } catch {}
     sadCb.addEventListener('change', () => {
       try {
-        if (sadCb.checked) localStorage.setItem('screen_audio_direct', '1');
-        else localStorage.removeItem('screen_audio_direct');
+        if (sadCb.checked) localStorage.setItem('screen_audio_webaudio', '1');
+        else localStorage.removeItem('screen_audio_webaudio');
       } catch {}
       // Apply immediately to any screen audio that's already playing.
       if (this.voice && typeof this.voice.reapplyScreenAudioRouting === 'function') {
