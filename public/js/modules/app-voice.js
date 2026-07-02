@@ -1710,6 +1710,7 @@ _popOutStreamWindow(tile, userId) {
       <span class="music-pip-label">🖥️ ${who}</span>
       <span class="music-pip-vol-icon stream-pip-opacity-icon" title="Window opacity">👁</span>
       <input type="range" class="music-pip-vol pip-opacity-slider stream-pip-opacity" min="20" max="100" value="${savedOpacity}">
+      <button class="music-pip-btn stream-pip-maximize" title="Maximize">⛶</button>
       <button class="music-pip-btn stream-pip-fullscreen" title="${t('media.fullscreen')}">⤢</button>
       <button class="music-pip-btn stream-pip-close" title="Close">✕</button>
     </div>
@@ -1763,6 +1764,16 @@ _popOutStreamWindow(tile, userId) {
     } else {
       (target.requestFullscreen || target.webkitRequestFullscreen).call(target).catch(() => {});
     }
+  });
+
+  // Maximize toggle — snap the overlay to fill the whole window (a full monitor
+  // when the browser is maximized on it), then restore the previous size.
+  const maxBtn = pip.querySelector('.stream-pip-maximize');
+  maxBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const maximized = pip.classList.toggle('stream-pip-maximized');
+    maxBtn.classList.toggle('active', maximized);
+    maxBtn.title = maximized ? 'Restore' : 'Maximize';
   });
 
   pip.querySelector('.stream-pip-opacity').addEventListener('input', (e) => {

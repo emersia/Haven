@@ -12102,6 +12102,21 @@ video:-webkit-full-screen {
   display: block;
 }
 
+/* Maximized state — fill the whole window so the stream can take up a full
+   monitor. !important is required to beat the inline width/height the drag +
+   browser resize handles write onto the element. */
+.stream-pip-overlay.stream-pip-maximized {
+  left: 0 !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  border-radius: 0;
+  resize: none;
+}
+.stream-pip-maximize.active { background: rgba(255,255,255,0.22); }
+
 @media (max-width: 768px) {
   .stream-pip-overlay {
     width: 280px;
