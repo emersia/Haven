@@ -5,7 +5,7 @@ const fs   = require('fs');
 const { utcStamp, isString, isInt, sanitizeText } = require('./helpers');
 
 module.exports = function register(socket, ctx) {
-  const { io, db, state, userHasPermission, getUserEffectiveLevel,
+  const { io, db, state, userHasPermission, getUserEffectiveLevel, getChannelRoleChain,
           sendPushNotifications, fireWebhookCallbacks, fireWebhookEvent, processSlashCommand,
           touchVoiceActivity, floodCheck, UPLOADS_DIR, DELETED_ATTACHMENTS_DIR } = ctx;
   const { slowModeTracker } = state;
@@ -549,9 +549,12 @@ module.exports = function register(socket, ctx) {
     let allowOwnDelete = true;
     if (!socket.user.isAdmin) {
       try {
+        // (#5433) Channel-scoped override rows only apply in their channel.
+        const chain = getChannelRoleChain(channel.id);
+        const ph = chain.map(() => '?').join(',');
         const deny = db.prepare(
-          "SELECT allowed FROM user_role_perms WHERE user_id = ? AND permission = 'delete_own_messages' ORDER BY allowed ASC LIMIT 1"
-        ).get(socket.user.id);
+          `SELECT allowed FROM user_role_perms WHERE user_id = ? AND permission = 'delete_own_messages' AND (channel_id IS NULL OR channel_id IN (${ph})) ORDER BY allowed ASC LIMIT 1`
+        ).get(socket.user.id, ...chain);
         if (deny && deny.allowed === 0) allowOwnDelete = false;
       } catch { /* table may not exist */ }
     }
@@ -1042,9 +1045,12 @@ module.exports = function register(socket, ctx) {
     if (msg.user_id === socket.user.id) {
       if (!socket.user.isAdmin) {
         try {
+          // (#5433) Channel-scoped override rows only apply in their channel.
+          const chain = getChannelRoleChain(channel.id);
+          const ph = chain.map(() => '?').join(',');
           const deny = db.prepare(
-            "SELECT allowed FROM user_role_perms WHERE user_id = ? AND permission = 'delete_own_messages' ORDER BY allowed ASC LIMIT 1"
-          ).get(socket.user.id);
+            `SELECT allowed FROM user_role_perms WHERE user_id = ? AND permission = 'delete_own_messages' AND (channel_id IS NULL OR channel_id IN (${ph})) ORDER BY allowed ASC LIMIT 1`
+          ).get(socket.user.id, ...chain);
           if (deny && deny.allowed === 0) {
             return socket.emit('error-msg', 'You don\'t have permission to delete messages');
           }

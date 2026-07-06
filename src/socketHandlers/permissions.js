@@ -54,12 +54,22 @@ module.exports = function createPermissions(db) {
     const user = db.prepare('SELECT is_admin FROM users WHERE id = ?').get(userId);
     if (user && user.is_admin) return true;
 
-    // Check per-user permission overrides first (explicit deny takes priority)
+    // Check per-user permission overrides first (explicit deny takes priority).
+    // (#5433) Overrides written by a channel-scoped role assignment carry that
+    // assignment's channel_id and must only apply within that channel (and its
+    // sub-channels, via the role chain). Rows with channel_id NULL come from
+    // server-wide assignments and apply everywhere. Previously this query had
+    // no channel filter, so ticking e.g. "create channel" on a channel
+    // assignment leaked the permission server-wide.
     try {
+      const chain = channelId ? getChannelRoleChain(channelId) : [];
+      const scopeClause = chain.length > 0
+        ? `(channel_id IS NULL OR channel_id IN (${chain.map(() => '?').join(',')}))`
+        : 'channel_id IS NULL';
       const override = db.prepare(`
-        SELECT allowed FROM user_role_perms WHERE user_id = ? AND permission = ?
+        SELECT allowed FROM user_role_perms WHERE user_id = ? AND permission = ? AND ${scopeClause}
         ORDER BY allowed ASC LIMIT 1
-      `).get(userId, permission);
+      `).get(userId, permission, ...chain);
       if (override) {
         if (override.allowed === 0) return false;
         if (override.allowed === 1) return true;
