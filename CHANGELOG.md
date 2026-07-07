@@ -11,6 +11,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/). Haven uses [Sema
 
 ---
 
+## [3.30.0] — 2026-07-06
+
+### Added
+- **Flags emoji category.** The emoji picker has a new Flags category with a broad set of country flags. The US flag leads the list, followed by two classic American flags — the Betsy Ross flag and the Gadsden ("Don't Tread on Me") flag — which ship built in and render inline in messages and reactions like any other emoji.
+- **Screen share pop-out maximize toggle (#5430).** The screen-share pop-out window now has a maximize/restore toggle so a shared stream can fill the pop-out.
+
+### Improved
+- **Smarter emoji search.** Typing an actual punctuation mark now finds the matching emoji — e.g. `?` surfaces ❓ and ⁉️, `!` surfaces ❗, and `#` or a digit matches its keycap emoji. Search also covers the new bundled flag emoji by name.
+
+### Fixed
+- **"New messages" divider and auto-scroll stopped appearing (#5432).** Opening a channel recorded it as fully read before its history finished loading, so the last-read divider from #5259 had nothing to anchor to. The read position is now saved after the history request, restoring the divider and the jump-to-unread scroll.
+- **Channel-scoped role permissions leaked server-wide (#5433).** Per-assignment permission checkboxes ticked on a role granted inside a specific channel (e.g. "create channel", "rename sub-channels") were being applied everywhere. They're now scoped to the channel they were granted in and its sub-channels; server-wide assignments still apply everywhere as before.
+
+### Changed
+- **README refresh (#5431).** Documented custom stickers and personas, the built-in backup tools, and the `::` persona shortcut, marked the Russian translation as human-reviewed, and updated roadmap statuses.
+
 ## [3.29.0] — 2026-06-29
 
 ### Added
