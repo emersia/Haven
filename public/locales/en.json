@@ -1675,6 +1675,7 @@
       "travel": "Travel",
       "objects": "Objects",
       "symbols": "Symbols",
+      "flags": "Flags",
       "custom": "Custom"
     }
   },

@@ -340,7 +340,7 @@ _isEmojiOnly(str) {
   // Only expand custom tokens that actually exist as loaded emojis
   const resolvedCustom = customMatches.filter(m => {
     const name = m.slice(1, -1).toLowerCase();
-    return this.customEmojis && this.customEmojis.some(e => e.name === name);
+    return !!this._findNamedEmoji(name);
   });
   let s = str.replace(/:([a-zA-Z0-9_-]+):/g, ' ');
   try {
@@ -354,6 +354,51 @@ _isEmojiOnly(str) {
   try { unicodeCount = (str.match(/[\p{Extended_Pictographic}]/gu) || []).length; } catch {}
   const total = resolvedCustom.length + unicodeCount;
   return total >= 1 && total <= 27;
+},
+
+// Resolve a `:name:` shortcode to an image emoji — checks the bundled
+// built-in image emoji (US flags, etc.) first, then server custom emoji.
+// Returns { name, url } or null.
+_findNamedEmoji(name) {
+  if (!name) return null;
+  const lower = String(name).toLowerCase();
+  return (this.builtinEmojis && this.builtinEmojis.find(e => e.name === lower))
+      || (this.customEmojis && this.customEmojis.find(e => e.name === lower))
+      || null;
+},
+
+// Punctuation search aliases: typing an actual punctuation mark (e.g. "?"
+// or "!") should surface the matching punctuation emojis, whose keywords
+// are stored as words ("question", "exclamation"). Cached after first use.
+_getEmojiPunctAliases() {
+  if (this._emojiPunctAliases) return this._emojiPunctAliases;
+  this._emojiPunctAliases = {
+    '?': 'question', '!': 'exclamation bang', ',': 'comma', '.': 'period dot',
+    ';': 'semicolon', ':': 'colon', '#': 'hash number pound', '*': 'asterisk star',
+    '+': 'plus add', '-': 'minus dash subtract', '=': 'equal', '/': 'slash divide',
+    '%': 'percent', '$': 'dollar money', '&': 'ampersand and', '@': 'at mention',
+    '^': 'caret up', '~': 'tilde', '<': 'less than left', '>': 'greater than right',
+    '(': 'parenthesis bracket', ')': 'parenthesis bracket',
+    '"': 'quote quotation', "'": 'apostrophe quote',
+    '©': 'copyright', '®': 'registered', '™': 'trademark', '∞': 'infinity',
+  };
+  return this._emojiPunctAliases;
+},
+
+// Shared emoji search matcher used by the emoji picker and reaction picker.
+// Matches on keyword substrings, the literal emoji character (so typing an
+// actual "?", "#", or a digit surfaces the matching emoji), and punctuation
+// aliases (typing "?" surfaces ❓ ⁉️ etc.).
+_emojiSearchMatch(emoji, keywords, rawQuery) {
+  const raw = (rawQuery || '').trim();
+  const q = raw.toLowerCase();
+  if (!q) return true;
+  const kw = (keywords || '').toLowerCase();
+  if (kw.includes(q)) return true;
+  if (typeof emoji === 'string' && raw && emoji.includes(raw)) return true;
+  const alias = this._getEmojiPunctAliases()[q];
+  if (alias && alias.split(/\s+/).some(w => kw.includes(w))) return true;
+  return false;
 },
 
 _formatContent(str) {
@@ -637,14 +682,12 @@ _formatContent(str) {
   // Render spoilers (||text||) — CSP-safe, uses delegated click handler
   html = html.replace(/\|\|(.+?)\|\|/g, '<span class="spoiler">$1</span>');
 
-  // Render custom emojis :name:
-  if (this.customEmojis && this.customEmojis.length > 0) {
-    html = html.replace(/:([a-zA-Z0-9_-]+):/g, (match, name) => {
-      const emoji = this.customEmojis.find(e => e.name === name.toLowerCase());
-      if (emoji) return `<img src="${this._escapeHtml(emoji.url)}" alt=":${this._escapeHtml(name)}:" title=":${this._escapeHtml(name)}:" class="custom-emoji">`;
-      return match;
-    });
-  }
+  // Render custom + bundled built-in image emojis :name:
+  html = html.replace(/:([a-zA-Z0-9_-]+):/g, (match, name) => {
+    const emoji = this._findNamedEmoji(name);
+    if (emoji) return `<img src="${this._escapeHtml(emoji.url)}" alt=":${this._escapeHtml(name)}:" title=":${this._escapeHtml(name)}:" class="custom-emoji">`;
+    return match;
+  });
 
   // Render /me action text (italic)
   if (html.startsWith('_') && html.endsWith('_') && html.length > 2) {
@@ -1228,11 +1271,11 @@ _toggleEmojiPicker(anchorEl) {
     grid.innerHTML = '';
     let emojis;
     if (filter) {
-      const q = filter.toLowerCase();
+      const q = filter.toLowerCase().trim();
       const matched = new Set();
-      // Search by emoji name keywords
+      // Search by keyword, literal character, and punctuation alias
       for (const [emoji, keywords] of Object.entries(self.emojiNames)) {
-        if (keywords.toLowerCase().includes(q)) matched.add(emoji);
+        if (self._emojiSearchMatch(emoji, keywords, filter)) matched.add(emoji);
       }
       // Also search by category name
       for (const [cat, list] of Object.entries(self.emojiCategories)) {
@@ -1242,6 +1285,12 @@ _toggleEmojiPicker(anchorEl) {
       if (self.customEmojis) {
         self.customEmojis.forEach(e => {
           if (e.name.toLowerCase().includes(q)) matched.add(`:${e.name}:`);
+        });
+      }
+      // Search bundled built-in image emoji by name + keywords
+      if (self.builtinEmojis) {
+        self.builtinEmojis.forEach(e => {
+          if (e.name.includes(q) || (e.keywords && e.keywords.toLowerCase().includes(q))) matched.add(`:${e.name}:`);
         });
       }
       emojis = matched.size > 0 ? [...matched] : [];
@@ -1258,7 +1307,7 @@ _toggleEmojiPicker(anchorEl) {
       // Check if it's a custom emoji (:name:)
       const customMatch = typeof emoji === 'string' && emoji.match(/^:([a-zA-Z0-9_-]+):$/);
       if (customMatch) {
-        const ce = self.customEmojis.find(e => e.name === customMatch[1]);
+        const ce = self._findNamedEmoji(customMatch[1]);
         if (ce) {
           btn.innerHTML = `<img src="${self._escapeHtml(ce.url)}" alt=":${self._escapeHtml(ce.name)}:" class="custom-emoji">`;
           btn.title = `:${ce.name}:`;
@@ -1688,7 +1737,7 @@ _renderReactions(msgId, reactions) {
     const customMatch = g.emoji.match(/^:([a-zA-Z0-9_-]+):$/);
     let emojiDisplay = g.emoji;
     if (customMatch && this.customEmojis) {
-      const ce = this.customEmojis.find(e => e.name === customMatch[1]);
+      const ce = this._findNamedEmoji(customMatch[1]);
       if (ce) emojiDisplay = `<img src="${this._escapeHtml(ce.url)}" alt=":${this._escapeHtml(ce.name)}:" class="custom-emoji reaction-custom-emoji">`;
     }
     return `<button class="reaction-badge${isOwn ? ' own' : ''}" data-emoji="${this._escapeHtml(g.emoji)}" data-users="${usersJson}" title="${names}">${emojiDisplay} ${g.users.length}</button>`;
@@ -1803,7 +1852,7 @@ _showQuickEmojiEditor(picker, msgEl, msgId) {
       // Check for custom emoji
       const customMatch = emoji.match(/^:([a-zA-Z0-9_-]+):$/);
       if (customMatch && this.customEmojis) {
-        const ce = this.customEmojis.find(e => e.name === customMatch[1]);
+        const ce = this._findNamedEmoji(customMatch[1]);
         if (ce) {
           slot.innerHTML = `<img src="${this._escapeHtml(ce.url)}" alt="${this._escapeHtml(emoji)}" class="custom-emoji" style="width:20px;height:20px">`;
           slot.title = `:${ce.name}:`;
@@ -1845,7 +1894,9 @@ _showQuickEmojiEditor(picker, msgEl, msgId) {
       emojis.forEach(emoji => {
         const btn = document.createElement('button');
         btn.className = 'reaction-full-btn';
-        btn.textContent = emoji;
+        const named = this._findNamedEmoji((typeof emoji === 'string' && (emoji.match(/^:([a-zA-Z0-9_-]+):$/) || [])[1]) || '');
+        if (named) btn.innerHTML = `<img src="${this._escapeHtml(named.url)}" alt="${this._escapeHtml(emoji)}" class="custom-emoji" style="width:22px;height:22px">`;
+        else btn.textContent = emoji;
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
           if (activeSlot !== null) {
@@ -1939,7 +1990,7 @@ _showReactionPicker(msgEl, msgId) {
     // Check for custom emoji
     const customMatch = emoji.match(/^:([a-zA-Z0-9_-]+):$/);
     if (customMatch && this.customEmojis) {
-      const ce = this.customEmojis.find(e => e.name === customMatch[1]);
+      const ce = this._findNamedEmoji(customMatch[1]);
       if (ce) {
         btn.innerHTML = `<img src="${this._escapeHtml(ce.url)}" alt="${this._escapeHtml(emoji)}" class="custom-emoji" style="width:20px;height:20px">`;
         btn.title = `:${ce.name}:`;
@@ -2070,10 +2121,7 @@ _showFullReactionPicker(msgEl, msgId, quickPicker) {
     const lowerFilter = filter ? filter.toLowerCase() : '';
     for (const [category, emojis] of Object.entries(this.emojiCategories)) {
       const matching = lowerFilter
-        ? emojis.filter(e => {
-            const names = this.emojiNames[e] || '';
-            return e.includes(lowerFilter) || names.toLowerCase().includes(lowerFilter) || category.toLowerCase().includes(lowerFilter);
-          })
+        ? emojis.filter(e => this._emojiSearchMatch(e, this.emojiNames[e] || '', filter) || category.toLowerCase().includes(lowerFilter))
         : emojis;
       if (matching.length === 0) continue;
 
@@ -2087,8 +2135,9 @@ _showFullReactionPicker(msgEl, msgId, quickPicker) {
       matching.forEach(emoji => {
         const btn = document.createElement('button');
         btn.className = 'reaction-full-btn';
-        btn.textContent = emoji;
-        btn.title = this.emojiNames[emoji] || '';
+        const named = this._findNamedEmoji((typeof emoji === 'string' && (emoji.match(/^:([a-zA-Z0-9_-]+):$/) || [])[1]) || '');
+        if (named) { btn.innerHTML = `<img src="${this._escapeHtml(named.url)}" alt="${this._escapeHtml(emoji)}" title="${this._escapeHtml(emoji)}" class="custom-emoji">`; }
+        else { btn.textContent = emoji; btn.title = this.emojiNames[emoji] || ''; }
         btn.addEventListener('click', () => {
           this.socket.emit('add-reaction', { messageId: msgId, emoji });
           panel.remove();

@@ -1943,7 +1943,16 @@ _showEmojiDropdown(query) {
 
   let results = [];
 
-  // Custom emojis first
+  // Bundled built-in image emoji first
+  if (this.builtinEmojis) {
+    this.builtinEmojis.forEach(em => {
+      if (em.name.includes(query) || (em.keywords && em.keywords.toLowerCase().includes(query))) {
+        results.push({ type: 'custom', name: em.name, url: em.url });
+      }
+    });
+  }
+
+  // Custom emojis
   if (this.customEmojis) {
     this.customEmojis.forEach(em => {
       if (em.name.toLowerCase().includes(query)) {
