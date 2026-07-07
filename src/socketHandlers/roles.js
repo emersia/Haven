@@ -6,7 +6,7 @@ const { isString, isInt, VALID_ROLE_PERMS } = require('./helpers');
 module.exports = function register(socket, ctx) {
   const {
     io, db, state, userHasPermission, getUserEffectiveLevel,
-    getUserPermissions, getUserRoles, getUserHighestRole,
+    getUserPermissions, getUserGlobalPermissions, getUserRoles, getUserHighestRole,
     emitOnlineUsers, broadcastChannelLists, getEnrichedChannels,
     transferAdminRef, HAVEN_VERSION, logAudit
   } = ctx;
@@ -50,7 +50,8 @@ module.exports = function register(socket, ctx) {
         s.emit('roles-updated', {
           roles: s.user.roles,
           effectiveLevel: s.user.effectiveLevel,
-          permissions: getUserPermissions(userId)
+          permissions: getUserPermissions(userId),
+          globalPermissions: getUserGlobalPermissions(userId)
         });
       }
     }
@@ -806,6 +807,7 @@ module.exports = function register(socket, ctx) {
               version: HAVEN_VERSION, roles: s.user.roles,
               effectiveLevel: s.user.effectiveLevel,
               permissions: getUserPermissions(socket.user.id),
+              globalPermissions: getUserGlobalPermissions(socket.user.id),
               status: s.user.status || 'online',
               statusText: s.user.statusText || ''
             });

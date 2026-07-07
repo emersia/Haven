@@ -9,6 +9,7 @@ _setupSocketListeners() {
     this.user.roles = data.roles || [];
     this.user.effectiveLevel = data.effectiveLevel || 0;
     this.user.permissions = data.permissions || [];
+    this.user.globalPermissions = data.globalPermissions || [];
     if (this.voice && data.id) this.voice.localUserId = data.id;
     if (data.status) {
       this.userStatus = data.status;
@@ -64,7 +65,7 @@ _setupSocketListeners() {
     this._updateAvatarPreview();
     // Show admin/mod controls based on role level
     const canModerate = this.user.isAdmin || this.user.effectiveLevel >= 25;
-    const canCreateChannel = this.user.isAdmin || this._hasPerm('create_channel');
+    const canCreateChannel = this.user.isAdmin || this._hasGlobalPerm('create_channel');
     document.getElementById('admin-controls').style.display = canCreateChannel ? 'block' : 'none';
     if (this.user.isAdmin) {
       document.getElementById('admin-mod-panel').style.display = 'block';
@@ -79,10 +80,11 @@ _setupSocketListeners() {
     this.user.roles = data.roles || [];
     this.user.effectiveLevel = data.effectiveLevel || 0;
     this.user.permissions = data.permissions || [];
+    this.user.globalPermissions = data.globalPermissions || [];
     localStorage.setItem('haven_user', JSON.stringify(this.user));
     // Refresh UI to reflect new permissions
     const canModerate = this.user.isAdmin || this.user.effectiveLevel >= 25;
-    const canCreateChannel = this.user.isAdmin || this._hasPerm('create_channel');
+    const canCreateChannel = this.user.isAdmin || this._hasGlobalPerm('create_channel');
     document.getElementById('admin-controls').style.display = canCreateChannel ? 'block' : 'none';
     document.getElementById('admin-mod-panel').style.display = (canModerate || this._hasPerm('manage_emojis') || this._hasPerm('manage_stickers') || this._hasPerm('manage_soundboard') || this._hasPerm('view_audit_log')) ? 'block' : 'none';
     document.getElementById('sidebar-members-btn').style.display = (this.user.isAdmin || canModerate || this._hasPerm('view_all_members') || this._hasPerm('view_channel_members')) ? '' : 'none';
@@ -1562,7 +1564,8 @@ _setupSocketListeners() {
     this._showToast(`Display name changed to "${data.user.displayName || data.user.username}"`, 'success');
     // Refresh admin UI in case admin status changed
     this.user.permissions = data.user.permissions || this.user.permissions || [];
-    const canCreate = data.user.isAdmin || this._hasPerm('create_channel');
+    this.user.globalPermissions = data.user.globalPermissions || this.user.globalPermissions || [];
+    const canCreate = data.user.isAdmin || this._hasGlobalPerm('create_channel');
     document.getElementById('admin-controls').style.display = canCreate ? 'block' : 'none';
     if (data.user.isAdmin) {
       document.getElementById('admin-mod-panel').style.display = 'block';

@@ -144,6 +144,52 @@ module.exports = function createPermissions(db) {
     return perms;
   }
 
+  // (#5433 follow-up) Global-only variant of getUserPermissions, for gating
+  // UI that performs a server-wide action regardless of which channel is
+  // active (e.g. the sidebar "Create Channel" section, which always creates
+  // a top-level channel). getUserPermissions() flattens server-wide AND
+  // channel-scoped grants together for per-channel UI (context menus opened
+  // for a specific channel), which is correct there — but that same flat
+  // list also made the always-visible sidebar button appear for users who
+  // only held create_channel in one sub-channel, a dead control since every
+  // click would be denied server-side. This variant excludes any
+  // channel-scoped role assignment or override (channel_id IS NULL only).
+  function getUserGlobalPermissions(userId) {
+    const user = db.prepare('SELECT is_admin FROM users WHERE id = ?').get(userId);
+    if (user && user.is_admin) return ['*'];
+    const rows = db.prepare(`
+      SELECT DISTINCT rp.permission FROM role_permissions rp
+      JOIN roles r ON rp.role_id = r.id
+      JOIN user_roles ur ON r.id = ur.role_id
+      WHERE ur.user_id = ? AND rp.allowed = 1 AND ur.channel_id IS NULL
+    `).all(userId);
+    const perms = rows.map(r => r.permission);
+
+    try {
+      const overrides = db.prepare(`
+        SELECT permission, allowed FROM user_role_perms WHERE user_id = ? AND channel_id IS NULL
+      `).all(userId);
+      for (const ov of overrides) {
+        if (ov.allowed === 1 && !perms.includes(ov.permission)) {
+          perms.push(ov.permission);
+        } else if (ov.allowed === 0) {
+          const idx = perms.indexOf(ov.permission);
+          if (idx !== -1) perms.splice(idx, 1);
+        }
+      }
+    } catch { /* user_role_perms table may not exist yet */ }
+
+    // getUserEffectiveLevel(userId) with no channelId arg already only
+    // considers server-scoped roles, so threshold-derived perms are
+    // inherently global here — no extra filtering needed.
+    const thresholds = getPermissionThresholds();
+    const level = getUserEffectiveLevel(userId);
+    for (const [perm, minLevel] of Object.entries(thresholds)) {
+      if (level >= minLevel && !perms.includes(perm)) perms.push(perm);
+    }
+    return perms;
+  }
+
   function getUserRoles(userId) {
     return db.prepare(`
       SELECT r.id, r.name, r.level, r.scope, r.color, ur.channel_id
@@ -214,7 +260,7 @@ module.exports = function createPermissions(db) {
 
   return {
     getChannelRoleChain, getUserEffectiveLevel, getPermissionThresholds,
-    userHasPermission, getUserPermissions, getUserRoles,
+    userHasPermission, getUserPermissions, getUserGlobalPermissions, getUserRoles,
     getUserHighestRole, getUserAllRoles
   };
 };

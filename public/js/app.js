@@ -4,7 +4,7 @@
 //           notifications, volume sliders, status bar
 // ═══════════════════════════════════════════════════════════
 
-import SocketMethods   from './modules/app-socket.js?v=3.17.1';
+import SocketMethods   from './modules/app-socket.js?v=3.30.3';
 import UIBindMethods   from './modules/app-ui.js?v=3.16.12';
 import MediaMethods    from './modules/app-media.js?v=3.16.12';
 import ContextMethods  from './modules/app-context.js?v=3.16.12';
@@ -139,6 +139,11 @@ class HavenApp {
     this._canModerate = () => this.user.isAdmin || (this.user.effectiveLevel || 0) >= 25;
     this._isServerMod = () => this.user.isAdmin || (this.user.effectiveLevel || 0) >= 50;
     this._hasPerm = (p) => this.user.isAdmin || (this.user.permissions || []).includes('*') || (this.user.permissions || []).includes(p);
+    // Global-only variant: excludes permissions granted via a channel-scoped
+    // role assignment, for gating UI that always performs a server-wide
+    // action (e.g. the sidebar "Create Channel" section always creates a
+    // top-level channel, regardless of which channel is active). (#5433)
+    this._hasGlobalPerm = (p) => this.user.isAdmin || (this.user.globalPermissions || []).includes('*') || (this.user.globalPermissions || []).includes(p);
 
     this.customEmojis = []; // [{name, url}] — loaded from server
     // Bundled image emoji shipped with Haven (rendered like custom emoji but
@@ -340,7 +345,7 @@ class HavenApp {
     const loginEl = document.getElementById('login-name');
     if (loginEl) loginEl.textContent = `@${this.user.username}`;
 
-    if (this.user.isAdmin || this._hasPerm('create_channel')) {
+    if (this.user.isAdmin || this._hasGlobalPerm('create_channel')) {
       document.getElementById('admin-controls').style.display = 'block';
     }
     if (this.user.isAdmin || this._hasPerm('manage_roles') || this._hasPerm('manage_server')) {
