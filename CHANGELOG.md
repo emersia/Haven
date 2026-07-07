@@ -11,6 +11,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/). Haven uses [Sema
 
 ---
 
+## [3.30.3] — 2026-07-07
+
+### Fixed
+- **"Create Channel" sidebar section stayed visible for users who could only create sub-channels (#5433 follow-up).** The flat permissions list sent to the client for UI gating mixed server-wide and channel-scoped grants together, so a user with `create_channel` scoped to a single channel saw the always-on sidebar "Create Channel" section — a dead control, since every submission creates a top-level channel and gets denied by the (correctly scoped) server check. That section is now gated on a global-only permission check, so it only appears for admins and users with a genuine server-wide `create_channel` grant.
+
 ## [3.30.2] — 2026-07-06
 
 ### Fixed
