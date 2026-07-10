@@ -1843,10 +1843,17 @@ app.post('/api/upload-role-icon', uploadLimiter, (req, res) => {
 // Token may be passed via ?token=... so the browser can trigger a normal download.
 const ALL_BACKUP_SECTIONS = ['channels', 'users', 'settings', 'messages', 'dms', 'files'];
 
-// Build a backup zip buffer from the requested sections. Returns { buf, filename, mode, include }.
+// Stream a backup zip to `outPath` from the requested sections.
+// Returns a Promise<{ filePath, filename, mode, include }>.
 // Used by both the admin download endpoint and the auto-backup scheduler.
-function buildBackupBuffer(includeRaw) {
-  const AdmZip = require('adm-zip');
+//
+// This streams every entry to disk via `archiver` rather than building the
+// whole archive in memory. The previous adm-zip approach called
+// `zip.toBuffer()`, which held every upload plus the full compressed archive
+// in RAM at once — a ~30GB "with files" backup blew past Node's Buffer size
+// limit (RangeError) and the heap (OOM), crashing the server. See issue #5434.
+function buildBackupFile(includeRaw, outPath) {
+  const archiver = require('archiver');
   let include = Array.isArray(includeRaw)
     ? includeRaw.map(s => String(s).trim().toLowerCase()).filter(s => ALL_BACKUP_SECTIONS.includes(s))
     : ALL_BACKUP_SECTIONS.slice();
@@ -1856,107 +1863,130 @@ function buildBackupBuffer(includeRaw) {
   const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
   const filename = `haven-backup-${mode === 'full' ? 'full' : include.join('-')}-${ts}.zip`;
 
-  let tmpDb = null;
-  try {
-    const { getDb } = require('./src/database');
-    const db = getDb();
-    const zip = new AdmZip();
-
-    const manifest = {
-      app: 'haven',
-      version: require('./package.json').version,
-      exportedAt: new Date().toISOString(),
-      mode,
-      include,
-      serverName: process.env.SERVER_NAME || 'Haven',
+  return new Promise((resolve, reject) => {
+    let tmpDb = null;
+    let settled = false;
+    const cleanup = () => { if (tmpDb) { try { fs.unlinkSync(tmpDb); } catch {} } };
+    // Resolve/reject exactly once, always after the temp DB clone is removed.
+    const finish = (err) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      if (err) { try { fs.unlinkSync(outPath); } catch {} reject(err); }
+      else resolve({ filePath: outPath, filename, mode, include });
     };
-    zip.addFile('manifest.json', Buffer.from(JSON.stringify(manifest, null, 2)));
 
-    const structureTables = [];
-    if (has('channels')) structureTables.push('channels', 'roles', 'role_permissions', 'user_roles', 'channel_members');
-    if (has('users')) structureTables.push('users');
-    if (has('settings')) structureTables.push('server_settings', 'whitelist');
+    try {
+      const { getDb } = require('./src/database');
+      const db = getDb();
 
-    if (structureTables.length) {
-      const data = {};
-      for (const tbl of structureTables) {
-        try { data[tbl] = db.prepare(`SELECT * FROM ${tbl}`).all(); }
-        catch { data[tbl] = []; }
-      }
-      // Filter out DM channels (and their members) when DMs aren't included.
-      // DM bodies are E2E-encrypted, but the channel rows still leak who
-      // talked to whom — keep the metadata out unless the admin opted in.
-      if (!has('dms') && data.channels) {
-        const dmChannelIds = new Set(data.channels.filter(c => c.is_dm).map(c => c.id));
-        data.channels = data.channels.filter(c => !c.is_dm);
-        if (data.channel_members) {
-          data.channel_members = data.channel_members.filter(m => !dmChannelIds.has(m.channel_id));
-        }
-      }
-      if (data.users) {
-        data.users = data.users.map(u => {
-          const safe = { ...u };
-          delete safe.password_hash;
-          delete safe.password_version;
-          delete safe.totp_secret;
-          delete safe.totp_backup_codes;
-          delete safe.recovery_codes_hash;
-          delete safe.recovery_codes;
-          delete safe.email;
-          return safe;
-        });
-      }
-      if (data.server_settings) {
-        const SENSITIVE_KEYS = new Set(['vanity_code', 'server_invite_code']);
-        data.server_settings = data.server_settings.filter(r => !SENSITIVE_KEYS.has(r.key));
-      }
-      zip.addFile('structure.json', Buffer.from(JSON.stringify(data, null, 2)));
-    }
+      const output = fs.createWriteStream(outPath);
+      const archive = archiver('zip', { zlib: { level: 6 } });
+      output.on('close', () => finish());
+      output.on('error', finish);
+      archive.on('error', finish);
+      // ENOENT here just means a file vanished mid-walk (e.g. an attachment was
+      // deleted) — skip it rather than failing the whole backup.
+      archive.on('warning', (w) => { if (w.code !== 'ENOENT') finish(w); });
+      archive.pipe(output);
 
-    if (has('messages')) {
-      tmpDb = path.join(DATA_DIR, `.backup-${Date.now()}-${Math.random().toString(36).slice(2)}.db`);
-      try { db.exec('PRAGMA wal_checkpoint(TRUNCATE)'); } catch {}
-      const safePath = tmpDb.replace(/'/g, "''");
-      db.prepare(`VACUUM INTO '${safePath}'`).run();
-      // If DMs are NOT included, scrub them from the cloned DB so the backup
-      // doesn't ship encrypted-but-still-private DM ciphertext (or attachment
-      // refs) to wherever the admin stores their backup files.
-      if (!has('dms')) {
-        const Database = require('better-sqlite3');
-        const tmp = new Database(tmpDb);
-        try {
-          tmp.exec('DELETE FROM messages WHERE channel_id IN (SELECT id FROM channels WHERE is_dm = 1)');
-          tmp.exec('DELETE FROM channels WHERE is_dm = 1');
-          tmp.exec('VACUUM');
-        } finally {
-          tmp.close();
-        }
-      }
-      zip.addLocalFile(tmpDb, '', 'haven.db');
-    }
-
-    if (has('files') && fs.existsSync(UPLOADS_DIR)) {
-      const walk = (dir, rel) => {
-        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-          if (entry.name === 'deleted-attachments') continue;
-          const full = path.join(dir, entry.name);
-          const sub = rel ? `${rel}/${entry.name}` : entry.name;
-          try {
-            if (entry.isFile()) zip.addLocalFile(full, `uploads${rel ? '/' + rel : ''}`);
-            else if (entry.isDirectory()) walk(full, sub);
-          } catch {}
-        }
+      const manifest = {
+        app: 'haven',
+        version: require('./package.json').version,
+        exportedAt: new Date().toISOString(),
+        mode,
+        include,
+        serverName: process.env.SERVER_NAME || 'Haven',
       };
-      walk(UPLOADS_DIR, '');
-    }
+      archive.append(Buffer.from(JSON.stringify(manifest, null, 2)), { name: 'manifest.json' });
 
-    return { buf: zip.toBuffer(), filename, mode, include };
-  } finally {
-    if (tmpDb) { try { fs.unlinkSync(tmpDb); } catch {} }
-  }
+      const structureTables = [];
+      if (has('channels')) structureTables.push('channels', 'roles', 'role_permissions', 'user_roles', 'channel_members');
+      if (has('users')) structureTables.push('users');
+      if (has('settings')) structureTables.push('server_settings', 'whitelist');
+
+      if (structureTables.length) {
+        const data = {};
+        for (const tbl of structureTables) {
+          try { data[tbl] = db.prepare(`SELECT * FROM ${tbl}`).all(); }
+          catch { data[tbl] = []; }
+        }
+        // Filter out DM channels (and their members) when DMs aren't included.
+        // DM bodies are E2E-encrypted, but the channel rows still leak who
+        // talked to whom — keep the metadata out unless the admin opted in.
+        if (!has('dms') && data.channels) {
+          const dmChannelIds = new Set(data.channels.filter(c => c.is_dm).map(c => c.id));
+          data.channels = data.channels.filter(c => !c.is_dm);
+          if (data.channel_members) {
+            data.channel_members = data.channel_members.filter(m => !dmChannelIds.has(m.channel_id));
+          }
+        }
+        if (data.users) {
+          data.users = data.users.map(u => {
+            const safe = { ...u };
+            delete safe.password_hash;
+            delete safe.password_version;
+            delete safe.totp_secret;
+            delete safe.totp_backup_codes;
+            delete safe.recovery_codes_hash;
+            delete safe.recovery_codes;
+            delete safe.email;
+            return safe;
+          });
+        }
+        if (data.server_settings) {
+          const SENSITIVE_KEYS = new Set(['vanity_code', 'server_invite_code']);
+          data.server_settings = data.server_settings.filter(r => !SENSITIVE_KEYS.has(r.key));
+        }
+        archive.append(Buffer.from(JSON.stringify(data, null, 2)), { name: 'structure.json' });
+      }
+
+      if (has('messages')) {
+        tmpDb = path.join(DATA_DIR, `.backup-${Date.now()}-${Math.random().toString(36).slice(2)}.db`);
+        try { db.exec('PRAGMA wal_checkpoint(TRUNCATE)'); } catch {}
+        const safePath = tmpDb.replace(/'/g, "''");
+        db.prepare(`VACUUM INTO '${safePath}'`).run();
+        // If DMs are NOT included, scrub them from the cloned DB so the backup
+        // doesn't ship encrypted-but-still-private DM ciphertext (or attachment
+        // refs) to wherever the admin stores their backup files.
+        if (!has('dms')) {
+          const Database = require('better-sqlite3');
+          const tmp = new Database(tmpDb);
+          try {
+            tmp.exec('DELETE FROM messages WHERE channel_id IN (SELECT id FROM channels WHERE is_dm = 1)');
+            tmp.exec('DELETE FROM channels WHERE is_dm = 1');
+            tmp.exec('VACUUM');
+          } finally {
+            tmp.close();
+          }
+        }
+        // Streamed from disk during finalize; the temp clone is unlinked in finish().
+        archive.file(tmpDb, { name: 'haven.db' });
+      }
+
+      if (has('files') && fs.existsSync(UPLOADS_DIR)) {
+        const walk = (dir, rel) => {
+          for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+            if (entry.name === 'deleted-attachments') continue;
+            const full = path.join(dir, entry.name);
+            const sub = rel ? `${rel}/${entry.name}` : entry.name;
+            try {
+              if (entry.isFile()) archive.file(full, { name: `uploads/${sub}` });
+              else if (entry.isDirectory()) walk(full, sub);
+            } catch {}
+          }
+        };
+        walk(UPLOADS_DIR, '');
+      }
+
+      archive.finalize();
+    } catch (err) {
+      finish(err);
+    }
+  });
 }
 
-app.get('/api/admin/backup', (req, res) => {
+app.get('/api/admin/backup', async (req, res) => {
   const token = req.query.token || req.headers.authorization?.split(' ')[1];
   const user = token ? verifyToken(token) : null;
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
@@ -1972,12 +2002,18 @@ app.get('/api/admin/backup', (req, res) => {
     include = ['channels', 'users', 'settings'];
   }
 
+  // Build to a temp file first, then stream it to the client. This keeps the
+  // whole archive off the heap so large "with files" backups no longer OOM
+  // the server the way res.send(zip.toBuffer()) did (#5434).
+  const tmpOut = path.join(DATA_DIR, `.backup-out-${Date.now()}-${Math.random().toString(36).slice(2)}.zip`);
   try {
-    const { buf, filename } = buildBackupBuffer(include);
-    res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.send(buf);
+    const { filePath, filename } = await buildBackupFile(include, tmpOut);
+    res.download(filePath, filename, (err) => {
+      try { fs.unlinkSync(tmpOut); } catch {}
+      if (err && !res.headersSent) console.error('[Backup] Send failed:', err);
+    });
   } catch (err) {
+    try { fs.unlinkSync(tmpOut); } catch {}
     console.error('[Backup] Failed:', err);
     if (!res.headersSent) res.status(500).json({ error: 'Backup failed: ' + err.message });
   }
@@ -4190,7 +4226,7 @@ function pruneAutoBackups(retain) {
   try {
     if (!fs.existsSync(AUTO_BACKUP_DIR)) return;
     const files = fs.readdirSync(AUTO_BACKUP_DIR)
-      .filter(f => f.endsWith('.zip'))
+      .filter(f => f.endsWith('.zip') && !f.startsWith('.'))
       .map(f => ({ name: f, full: path.join(AUTO_BACKUP_DIR, f), mtime: fs.statSync(path.join(AUTO_BACKUP_DIR, f)).mtimeMs }))
       .sort((a, b) => b.mtime - a.mtime);
     for (const f of files.slice(retain)) {
@@ -4201,7 +4237,7 @@ function pruneAutoBackups(retain) {
   }
 }
 
-function runAutoBackup() {
+async function runAutoBackup() {
   try {
     const getSetting = (key) => {
       const row = db.prepare('SELECT value FROM server_settings WHERE key = ?').get(key);
@@ -4220,12 +4256,16 @@ function runAutoBackup() {
 
     if (!fs.existsSync(AUTO_BACKUP_DIR)) fs.mkdirSync(AUTO_BACKUP_DIR, { recursive: true });
 
-    const { buf, filename } = buildBackupBuffer(include);
+    // Stream to a .partial file first so a crash mid-write can't leave a
+    // truncated .zip that pruning/restore would treat as valid, then rename in.
+    const tmpOut = path.join(AUTO_BACKUP_DIR, `.partial-${Date.now()}-${Math.random().toString(36).slice(2)}.zip`);
+    const { filePath, filename } = await buildBackupFile(include, tmpOut);
     const outPath = path.join(AUTO_BACKUP_DIR, filename);
-    fs.writeFileSync(outPath, buf);
+    fs.renameSync(filePath, outPath);
+    const sizeMB = (fs.statSync(outPath).size / 1024 / 1024).toFixed(2);
     db.prepare("INSERT OR REPLACE INTO server_settings (key, value) VALUES ('auto_backup_last_run', ?)").run(String(now));
     pruneAutoBackups(retain);
-    console.log(`💾 Auto-backup written: ${filename} (${(buf.length / 1024 / 1024).toFixed(2)} MB)`);
+    console.log(`💾 Auto-backup written: ${filename} (${sizeMB} MB)`);
   } catch (err) {
     console.error('[AutoBackup] Failed:', err);
   }
@@ -4246,7 +4286,7 @@ app.get('/api/admin/auto-backups', (req, res) => {
   try {
     if (!fs.existsSync(AUTO_BACKUP_DIR)) return res.json({ files: [] });
     const files = fs.readdirSync(AUTO_BACKUP_DIR)
-      .filter(f => f.endsWith('.zip'))
+      .filter(f => f.endsWith('.zip') && !f.startsWith('.'))
       .map(f => {
         const st = fs.statSync(path.join(AUTO_BACKUP_DIR, f));
         return { name: f, size: st.size, mtime: st.mtimeMs };

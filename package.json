@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "haven",
   "version": "3.30.3",
   "description": "Haven - self-hosted private chat for your server, your rules",
@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "adm-zip": "^0.5.16",
+    "archiver": "^7.0.1",
     "bcryptjs": "^2.4.3",
     "better-sqlite3": "^12.10.0",
     "dotenv": "^16.4.7",
