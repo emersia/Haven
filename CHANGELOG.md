@@ -11,6 +11,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/). Haven uses [Sema
 
 ---
 
+## [3.31.2] — 2026-07-11
+
+### Fixed
+- **The manual "Download Backup" button now works on large servers (#5434).** Automatic backups were fixed in 3.31.0, but the manual download still built the entire zip to a temporary file before sending anything, so on a big server (30GB of files) it sat silent for minutes and a proxy in front of Haven returned a 502 before the download ever started. The download now streams the archive straight to the browser as it builds, so it starts immediately and stays alive for the whole transfer.
+
 ## [3.31.1] — 2026-07-10
 
 ### Fixed
