@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "haven",
   "version": "3.31.0",
   "description": "Haven - self-hosted private chat for your server, your rules",
@@ -26,7 +26,8 @@
     "otpauth": "^9.5.0",
     "qrcode": "^1.5.4",
     "socket.io": "^4.8.1",
-    "web-push": "^3.6.7"
+    "web-push": "^3.6.7",
+    "yauzl": "^3.4.0"
   },
   "overrides": {
     "bn.js": ">=5.2.3",

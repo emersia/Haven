@@ -2026,8 +2026,92 @@ app.get('/api/admin/backup', async (req, res) => {
 // preserved at haven.db.pre-restore / uploads.pre-restore for one cycle.
 const restoreUpload = multer({
   dest: path.join(DATA_DIR, 'tmp-restore'),
-  limits: { fileSize: 4 * 1024 * 1024 * 1024 },
+  // Admin-only endpoint. A full backup that includes files can be very large
+  // (reporters hit 15GB+), and the old 4GB cap rejected the upload part-way,
+  // which surfaced to the browser as a "failed to fetch" (#5436). The practical
+  // limit is the host's disk, not this number.
+  limits: { fileSize: 512 * 1024 * 1024 * 1024 },
 });
+
+// Stream a full backup zip into staged DB + uploads on disk. Reads entries with
+// yauzl (random access, low memory) instead of loading the whole archive into
+// RAM the way adm-zip did, so restoring a large backup (15GB+) no longer OOMs
+// or crashes the server (#5436). Resolves with the parsed manifest. Rejects with
+// an Error whose .status is 400 for a bad/partial backup, or a generic error
+// (treated as 500) for IO problems.
+function extractFullBackup(zipPath, stagedDb, stagedUploads) {
+  const yauzl = require('yauzl');
+  const bad = (msg) => Object.assign(new Error(msg), { status: 400 });
+
+  const readEntryBuffer = (zipfile, entry) => new Promise((resolve, reject) => {
+    zipfile.openReadStream(entry, (err, rs) => {
+      if (err) return reject(err);
+      const chunks = [];
+      rs.on('data', c => chunks.push(c));
+      rs.on('end', () => resolve(Buffer.concat(chunks)));
+      rs.on('error', reject);
+    });
+  });
+  const streamEntryToFile = (zipfile, entry, dest) => new Promise((resolve, reject) => {
+    zipfile.openReadStream(entry, (err, rs) => {
+      if (err) return reject(err);
+      const ws = fs.createWriteStream(dest);
+      rs.on('error', reject);
+      ws.on('error', reject);
+      ws.on('finish', resolve);
+      rs.pipe(ws);
+    });
+  });
+
+  return new Promise((resolve, reject) => {
+    yauzl.open(zipPath, { lazyEntries: true, autoClose: false }, (err, zipfile) => {
+      if (err) return reject(bad('Invalid backup: not a readable zip file'));
+      const entries = [];
+      zipfile.on('error', reject);
+      zipfile.on('entry', (entry) => { entries.push(entry); zipfile.readEntry(); });
+      zipfile.on('end', async () => {
+        try {
+          const find = (n) => entries.find(e => e.fileName === n);
+          const manifestEntry = find('manifest.json');
+          if (!manifestEntry) throw bad('Invalid backup: missing manifest.json');
+          let manifest;
+          try { manifest = JSON.parse((await readEntryBuffer(zipfile, manifestEntry)).toString('utf8')); }
+          catch { throw bad('Invalid backup: corrupt manifest.json'); }
+          if (manifest.app !== 'haven') throw bad('Not a Haven backup file');
+          if (manifest.mode !== 'full') throw bad('Only full backups can be restored automatically. Structure-only backups must be re-imported manually.');
+          const dbEntry = find('haven.db');
+          if (!dbEntry) throw bad('Invalid full backup: missing haven.db');
+
+          // Stage the DB clone (streamed from the zip to disk).
+          await streamEntryToFile(zipfile, dbEntry, stagedDb);
+
+          // Stage uploads, one entry at a time, with a path-traversal guard so a
+          // crafted entry name can't write outside the staging directory.
+          if (fs.existsSync(stagedUploads)) fs.rmSync(stagedUploads, { recursive: true, force: true });
+          const uploadEntries = entries.filter(e => e.fileName.startsWith('uploads/') && !e.fileName.endsWith('/'));
+          if (uploadEntries.length) {
+            fs.mkdirSync(stagedUploads, { recursive: true });
+            const root = path.resolve(stagedUploads);
+            for (const ue of uploadEntries) {
+              const rel = ue.fileName.slice('uploads/'.length);
+              if (!rel) continue;
+              const dest = path.resolve(root, rel);
+              if (dest !== root && !dest.startsWith(root + path.sep)) continue; // reject ../ escapes
+              fs.mkdirSync(path.dirname(dest), { recursive: true });
+              await streamEntryToFile(zipfile, ue, dest);
+            }
+          }
+          zipfile.close();
+          resolve(manifest);
+        } catch (e) {
+          try { zipfile.close(); } catch {}
+          reject(e);
+        }
+      });
+      zipfile.readEntry();
+    });
+  });
+}
 
 app.post('/api/admin/restore', (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
@@ -2035,102 +2119,65 @@ app.post('/api/admin/restore', (req, res) => {
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
   if (!verifyAdminFromDb(user)) return res.status(403).json({ error: 'Admin only' });
 
+  // A large restore uploads a multi-GB body and then stages it to disk, both of
+  // which run far longer than the 2 min socket inactivity timeout. Clear the
+  // timeout on this admin-only connection so it isn't killed mid-restore (#5436).
+  req.setTimeout(0);
+  res.setTimeout(0);
+
   const tmpDir = path.join(DATA_DIR, 'tmp-restore');
   if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
 
-  restoreUpload.single('backup')(req, res, (err) => {
+  restoreUpload.single('backup')(req, res, async (err) => {
     if (err) return res.status(400).json({ error: err.message });
     if (!req.file) return res.status(400).json({ error: 'No backup file uploaded' });
 
     const cleanupTmp = () => { try { fs.unlinkSync(req.file.path); } catch {} };
+    const stagedDb = DB_PATH + '.restore';
+    const stagedUploads = UPLOADS_DIR + '.restore';
 
+    let manifest;
     try {
-      const AdmZip = require('adm-zip');
-      const zip = new AdmZip(req.file.path);
-      const entries = zip.getEntries();
-
-      const manifestEntry = entries.find(e => e.entryName === 'manifest.json');
-      if (!manifestEntry) {
-        cleanupTmp();
-        return res.status(400).json({ error: 'Invalid backup: missing manifest.json' });
-      }
-      let manifest;
-      try { manifest = JSON.parse(manifestEntry.getData().toString('utf8')); }
-      catch {
-        cleanupTmp();
-        return res.status(400).json({ error: 'Invalid backup: corrupt manifest.json' });
-      }
-      if (manifest.app !== 'haven') {
-        cleanupTmp();
-        return res.status(400).json({ error: 'Not a Haven backup file' });
-      }
-      if (manifest.mode !== 'full') {
-        cleanupTmp();
-        return res.status(400).json({
-          error: 'Only full backups can be restored automatically. Structure-only backups must be re-imported manually.',
-        });
-      }
-      const dbEntry = entries.find(e => e.entryName === 'haven.db');
-      if (!dbEntry) {
-        cleanupTmp();
-        return res.status(400).json({ error: 'Invalid full backup: missing haven.db' });
-      }
-
-      // Stage DB
-      const stagedDb = DB_PATH + '.restore';
-      fs.writeFileSync(stagedDb, dbEntry.getData());
-
-      // Stage uploads
-      const stagedUploads = UPLOADS_DIR + '.restore';
-      if (fs.existsSync(stagedUploads)) {
-        fs.rmSync(stagedUploads, { recursive: true, force: true });
-      }
-      const uploadEntries = entries.filter(e => e.entryName.startsWith('uploads/') && !e.isDirectory);
-      if (uploadEntries.length > 0) {
-        fs.mkdirSync(stagedUploads, { recursive: true });
-        for (const ue of uploadEntries) {
-          const rel = ue.entryName.slice('uploads/'.length);
-          if (!rel || rel.includes('..')) continue;
-          const dest = path.join(stagedUploads, rel);
-          fs.mkdirSync(path.dirname(dest), { recursive: true });
-          fs.writeFileSync(dest, ue.getData());
-        }
-      }
-
-      cleanupTmp();
-      res.json({
-        ok: true,
-        message: 'Backup staged. Server will restart in ~2 seconds to apply. If the server does not come back up, your hosting setup may not auto-restart — start Haven manually.',
-        scheduled: true,
-      });
-
-      // Apply swap and exit so the supervisor restarts us cleanly
-      setTimeout(() => {
-        console.log('🔄 Applying staged backup restore and restarting...');
-        try {
-          if (fs.existsSync(stagedDb)) {
-            try { fs.copyFileSync(DB_PATH, DB_PATH + '.pre-restore'); } catch {}
-            // Remove stale WAL/SHM so SQLite reopens against the restored file
-            try { fs.unlinkSync(DB_PATH + '-wal'); } catch {}
-            try { fs.unlinkSync(DB_PATH + '-shm'); } catch {}
-            fs.renameSync(stagedDb, DB_PATH);
-          }
-          if (fs.existsSync(stagedUploads)) {
-            const oldUploads = UPLOADS_DIR + '.pre-restore';
-            if (fs.existsSync(oldUploads)) fs.rmSync(oldUploads, { recursive: true, force: true });
-            if (fs.existsSync(UPLOADS_DIR)) fs.renameSync(UPLOADS_DIR, oldUploads);
-            fs.renameSync(stagedUploads, UPLOADS_DIR);
-          }
-        } catch (e) {
-          console.error('[Restore] Swap failed:', e);
-        }
-        process.exit(0);
-      }, 1500);
+      manifest = await extractFullBackup(req.file.path, stagedDb, stagedUploads);
     } catch (e) {
       cleanupTmp();
-      console.error('[Restore] Failed:', e);
-      if (!res.headersSent) res.status(500).json({ error: 'Restore failed: ' + e.message });
+      try { fs.unlinkSync(stagedDb); } catch {}
+      try { fs.rmSync(stagedUploads, { recursive: true, force: true }); } catch {}
+      const status = e && e.status ? e.status : 500;
+      if (status === 500) console.error('[Restore] Failed:', e);
+      if (!res.headersSent) res.status(status).json({ error: status === 500 ? ('Restore failed: ' + e.message) : e.message });
+      return;
     }
+
+    cleanupTmp();
+    res.json({
+      ok: true,
+      message: 'Backup staged. Server will restart in ~2 seconds to apply. If the server does not come back up, your hosting setup may not auto-restart — start Haven manually.',
+      scheduled: true,
+    });
+
+    // Apply swap and exit so the supervisor restarts us cleanly
+    setTimeout(() => {
+      console.log('🔄 Applying staged backup restore and restarting...');
+      try {
+        if (fs.existsSync(stagedDb)) {
+          try { fs.copyFileSync(DB_PATH, DB_PATH + '.pre-restore'); } catch {}
+          // Remove stale WAL/SHM so SQLite reopens against the restored file
+          try { fs.unlinkSync(DB_PATH + '-wal'); } catch {}
+          try { fs.unlinkSync(DB_PATH + '-shm'); } catch {}
+          fs.renameSync(stagedDb, DB_PATH);
+        }
+        if (fs.existsSync(stagedUploads)) {
+          const oldUploads = UPLOADS_DIR + '.pre-restore';
+          if (fs.existsSync(oldUploads)) fs.rmSync(oldUploads, { recursive: true, force: true });
+          if (fs.existsSync(UPLOADS_DIR)) fs.renameSync(UPLOADS_DIR, oldUploads);
+          fs.renameSync(stagedUploads, UPLOADS_DIR);
+        }
+      } catch (e) {
+        console.error('[Restore] Swap failed:', e);
+      }
+      process.exit(0);
+    }, 1500);
   });
 });
 
@@ -4646,10 +4693,14 @@ setInterval(() => {
 }, 30000);  // every 30 seconds
 
 // ── Anti-Slowloris: server-level timeouts ────────────────
+// headersTimeout is the real slowloris defense (slow/incomplete headers). The
+// whole-request cap is generous because admin backup restores upload multi-GB
+// bodies that take minutes; the restore handler additionally clears its own
+// socket inactivity timeout while it stages the upload to disk (#5436).
 server.headersTimeout = 15000;     // 15s to send all headers
-server.requestTimeout = 30000;     // 30s total request time
+server.requestTimeout = 3600000;   // 1h max to finish sending a request body (large restore uploads)
 server.keepAliveTimeout = 65000;   // slightly above typical ALB/LB timeout
-server.timeout = 120000;           // 2 min absolute socket timeout
+server.timeout = 120000;           // 2 min socket inactivity timeout (resets on I/O)
 
 server.listen(PORT, HOST, () => {
   console.log(`
