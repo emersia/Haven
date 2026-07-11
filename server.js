@@ -1843,17 +1843,8 @@ app.post('/api/upload-role-icon', uploadLimiter, (req, res) => {
 // Token may be passed via ?token=... so the browser can trigger a normal download.
 const ALL_BACKUP_SECTIONS = ['channels', 'users', 'settings', 'messages', 'dms', 'files'];
 
-// Stream a backup zip to `outPath` from the requested sections.
-// Returns a Promise<{ filePath, filename, mode, include }>.
-// Used by both the admin download endpoint and the auto-backup scheduler.
-//
-// This streams every entry to disk via `archiver` rather than building the
-// whole archive in memory. The previous adm-zip approach called
-// `zip.toBuffer()`, which held every upload plus the full compressed archive
-// in RAM at once — a ~30GB "with files" backup blew past Node's Buffer size
-// limit (RangeError) and the heap (OOM), crashing the server. See issue #5434.
-function buildBackupFile(includeRaw, outPath) {
-  const archiver = require('archiver');
+// Resolve the requested sections into a concrete backup plan (sync, no IO).
+function backupPlan(includeRaw) {
   let include = Array.isArray(includeRaw)
     ? includeRaw.map(s => String(s).trim().toLowerCase()).filter(s => ALL_BACKUP_SECTIONS.includes(s))
     : ALL_BACKUP_SECTIONS.slice();
@@ -1862,6 +1853,22 @@ function buildBackupFile(includeRaw, outPath) {
   const mode = (has('messages') && has('files')) ? 'full' : 'partial';
   const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
   const filename = `haven-backup-${mode === 'full' ? 'full' : include.join('-')}-${ts}.zip`;
+  return { include, has, mode, filename };
+}
+
+// Build a backup zip and pipe it into `destStream` (a file write stream OR the
+// HTTP response). Resolves when the archive has been fully written.
+//
+// Everything is streamed via `archiver` rather than built in memory. The old
+// adm-zip path called `zip.toBuffer()`, holding every upload plus the whole
+// compressed archive in RAM at once — a ~30GB backup blew past Node's Buffer
+// limit (RangeError) and the heap (OOM), crashing the server. Streaming to the
+// response (instead of building a temp file first) also means bytes start
+// flowing immediately, so a large manual download no longer sits silent long
+// enough for a proxy in front of Haven to time out with a 502. See issue #5434.
+function pipeBackupArchive(plan, destStream) {
+  const archiver = require('archiver');
+  const { include, has, mode } = plan;
 
   return new Promise((resolve, reject) => {
     let tmpDb = null;
@@ -1872,23 +1879,25 @@ function buildBackupFile(includeRaw, outPath) {
       if (settled) return;
       settled = true;
       cleanup();
-      if (err) { try { fs.unlinkSync(outPath); } catch {} reject(err); }
-      else resolve({ filePath: outPath, filename, mode, include });
+      if (err) reject(err);
+      else resolve(plan);
     };
 
     try {
       const { getDb } = require('./src/database');
       const db = getDb();
 
-      const output = fs.createWriteStream(outPath);
       const archive = archiver('zip', { zlib: { level: 6 } });
-      output.on('close', () => finish());
-      output.on('error', finish);
+      // 'finish' fires for both fs write streams and the HTTP response once all
+      // bytes are written; 'close' covers a client that disconnects mid-stream.
+      destStream.on('finish', () => finish());
+      destStream.on('close', () => finish());
+      destStream.on('error', finish);
       archive.on('error', finish);
       // ENOENT here just means a file vanished mid-walk (e.g. an attachment was
       // deleted) — skip it rather than failing the whole backup.
       archive.on('warning', (w) => { if (w.code !== 'ENOENT') finish(w); });
-      archive.pipe(output);
+      archive.pipe(destStream);
 
       const manifest = {
         app: 'haven',
@@ -1986,6 +1995,16 @@ function buildBackupFile(includeRaw, outPath) {
   });
 }
 
+// Build a backup zip to a file on disk (used by the auto-backup scheduler).
+// Returns a Promise<{ filePath, filename, mode, include }>.
+function buildBackupFile(includeRaw, outPath) {
+  const plan = backupPlan(includeRaw);
+  const output = fs.createWriteStream(outPath);
+  return pipeBackupArchive(plan, output)
+    .then(() => ({ filePath: outPath, filename: plan.filename, mode: plan.mode, include: plan.include }))
+    .catch((err) => { try { fs.unlinkSync(outPath); } catch {} throw err; });
+}
+
 app.get('/api/admin/backup', async (req, res) => {
   const token = req.query.token || req.headers.authorization?.split(' ')[1];
   const user = token ? verifyToken(token) : null;
@@ -2002,20 +2021,22 @@ app.get('/api/admin/backup', async (req, res) => {
     include = ['channels', 'users', 'settings'];
   }
 
-  // Build to a temp file first, then stream it to the client. This keeps the
-  // whole archive off the heap so large "with files" backups no longer OOM
-  // the server the way res.send(zip.toBuffer()) did (#5434).
-  const tmpOut = path.join(DATA_DIR, `.backup-out-${Date.now()}-${Math.random().toString(36).slice(2)}.zip`);
+  // Stream the zip straight to the response. Building a temp file first meant a
+  // large (30GB) backup produced no response for minutes, so a proxy in front of
+  // Haven returned 502 and the download "failed" (#5434). Piping to res starts
+  // the bytes immediately and keeps the connection active; clear the inactivity
+  // timeout since a big backup takes longer than the 2 min socket timeout.
+  req.setTimeout(0);
+  res.setTimeout(0);
+  const plan = backupPlan(include);
+  res.setHeader('Content-Type', 'application/zip');
+  res.setHeader('Content-Disposition', `attachment; filename="${plan.filename}"`);
   try {
-    const { filePath, filename } = await buildBackupFile(include, tmpOut);
-    res.download(filePath, filename, (err) => {
-      try { fs.unlinkSync(tmpOut); } catch {}
-      if (err && !res.headersSent) console.error('[Backup] Send failed:', err);
-    });
+    await pipeBackupArchive(plan, res);
   } catch (err) {
-    try { fs.unlinkSync(tmpOut); } catch {}
     console.error('[Backup] Failed:', err);
     if (!res.headersSent) res.status(500).json({ error: 'Backup failed: ' + err.message });
+    else { try { res.destroy(); } catch {} }
   }
 });
 
