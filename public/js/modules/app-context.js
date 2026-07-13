@@ -455,7 +455,10 @@ _setupNotifications() {
   const statusUrlToggle = document.getElementById('status-url-toggle');
   if (statusUrlEl && statusUrlToggle) {
     const origin = window.location.origin;
-    let urlVisible = localStorage.getItem('haven_statusbar_show_url') !== 'false';
+    // Always start hidden each session — the address is only revealed after
+    // an explicit click, and that choice is intentionally NOT persisted so it
+    // resets to hidden every time the app (re)loads. (privacy default)
+    let urlVisible = false;
 
     const applyUrlVis = () => {
       if (urlVisible) {
@@ -474,7 +477,6 @@ _setupNotifications() {
 
     statusUrlToggle.addEventListener('click', () => {
       urlVisible = !urlVisible;
-      localStorage.setItem('haven_statusbar_show_url', String(urlVisible));
       applyUrlVis();
     });
 
