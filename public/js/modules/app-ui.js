@@ -1355,14 +1355,14 @@ _setupUI() {
   // Wire up voice join/leave audio cues + Desktop OS notifications
   this.voice.onVoiceJoin = (userId, username) => {
     this.notifications.playDirect('voice_join');
-    if (window.havenDesktop?.notify && userId !== this.user?.id) {
+    if (window.havenDesktop?.notify && userId !== this.user?.id && this.notifications.popupAllowed()) {
       const name = this._getNickname(userId, username) || username;
       window.havenDesktop.notify('Voice', `${name} joined voice`, { silent: true });
     }
   };
   this.voice.onVoiceLeave = (userId, username) => {
     this.notifications.playDirect('voice_leave');
-    if (window.havenDesktop?.notify && userId !== this.user?.id) {
+    if (window.havenDesktop?.notify && userId !== this.user?.id && this.notifications.popupAllowed()) {
       const name = this._getNickname(userId, username) || username;
       window.havenDesktop.notify('Voice', `${name} left voice`, { silent: true });
     }

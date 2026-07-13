@@ -2874,6 +2874,10 @@ _fireNativeNotification(message, channelCode, opts) {
   else if (!n.enabled) return;
   // Don't notify for own messages
   if (message.user_id === this.user?.id) return;
+  // Opt-in pop-up rate limit — throttle the visible banner (the sound already
+  // played via notifications.play() at the call site; unread badges are
+  // untouched). Off by default. (limit how often notifications pop the app)
+  if (!this.notifications.popupAllowed()) return;
 
   const sender = this._getNickname(message.user_id, message.username);
   const channel = this.channels?.find(c => c.code === channelCode);

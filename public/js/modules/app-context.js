@@ -252,6 +252,14 @@ _setupNotifications() {
   if (repliesToggle) { repliesToggle.checked = this.notifications.repliesEnabled; repliesToggle.addEventListener('change', () => { this.notifications.repliesEnabled = repliesToggle.checked; this.notifications._savePref('haven_notif_replies_enabled', repliesToggle.checked); }); }
   if (dmToggle) { dmToggle.checked = this.notifications.dmEnabled; dmToggle.addEventListener('change', () => { this.notifications.dmEnabled = dmToggle.checked; this.notifications._savePref('haven_notif_dm_enabled', dmToggle.checked); }); }
 
+  const popupCooldownSel = document.getElementById('notif-popup-cooldown');
+  if (popupCooldownSel) {
+    popupCooldownSel.value = String(this.notifications.popupCooldownMs || 0);
+    popupCooldownSel.addEventListener('change', () => {
+      this.notifications.setPopupCooldownMs(popupCooldownSel.value);
+    });
+  }
+
   toggle.addEventListener('change', () => {
     this.notifications.setEnabled(toggle.checked);
   });

@@ -1417,6 +1417,17 @@
             <span>Direct Messages</span>
             <input type="checkbox" id="notif-dm-enabled" checked>
           </label>
+          <label class="select-row">
+            <span>Limit pop-up notifications</span>
+            <select id="notif-popup-cooldown">
+              <option value="0">Off (show every one)</option>
+              <option value="30000">At most 1 every 30 sec</option>
+              <option value="60000">At most 1 per minute</option>
+              <option value="300000">At most 1 every 5 min</option>
+              <option value="900000">At most 1 every 15 min</option>
+            </select>
+          </label>
+          <small class="settings-hint" style="display:block;margin-bottom:6px">Throttle how often desktop/browser notification pop-ups appear, so a burst of messages or a flaky connection can't keep popping the app up. Notification sounds and unread badges are unaffected.</small>
           <label class="toggle-row">
             <span data-i18n="settings.sounds_section.auto_accept_streams">Auto-accept Streams</span>
             <input type="checkbox" id="auto-accept-streams" checked>
