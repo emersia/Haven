@@ -688,20 +688,40 @@ _setupSoundManagement() {
       const sbBtn      = document.getElementById('sb-sidebar-toggle-btn');
       const sbOpen     = sbPanel && !sbPanel.classList.contains('sb-hidden');
       const voiceOpen  = rightSb && !rightSb.classList.contains('collapsed');
-      const sbWidth    = sbOpen ? (parseInt(sbPanel.style.width) || sbPanel.offsetWidth || 220) : 0;
-      const voiceWidth = voiceOpen ? (parseInt(rightSb.style.width) || rightSb.offsetWidth || 240) : 0;
-      if (voiceBtn) voiceBtn.style.right = voiceWidth + 'px';
-      if (sbBtn) {
-        sbBtn.style.right = (voiceWidth + sbWidth) + 'px';
-        // When the sb panel is OPEN, the toggle button sits at the panel's
-        // left edge — a horizontal position the voice/users toggle never
-        // occupies. Align it with the voice header (top: 72px) so it stops
-        // visually crowding the first content row, which under the prior
-        // 114px stagger looked like an overlap with the top of the sound
-        // list. When the panel is CLOSED, both toggles can end up at
-        // right:0, so restore the 114px stagger to keep them from stacking.
-        sbBtn.style.top = sbOpen ? '72px' : '114px';
-      }
+
+      // `useRendered=false` places the button off the panel's *requested*
+      // width (style.width / default) so it slides smoothly while the panel's
+      // width transition is still animating. `useRendered=true` re-reads the
+      // *actual* laid-out width once the animation settles — this closes the
+      // gap that appeared when a narrow window let flex-shrink squeeze the
+      // panel below its requested width (min-width:200px floor), leaving the
+      // toggle stranded to the left of the panel's real edge.
+      const place = (useRendered) => {
+        const sbWidth = sbOpen
+          ? (useRendered ? (sbPanel.offsetWidth || parseInt(sbPanel.style.width) || 220)
+                         : (parseInt(sbPanel.style.width) || sbPanel.offsetWidth || 220))
+          : 0;
+        const voiceWidth = voiceOpen
+          ? (useRendered ? (rightSb.offsetWidth || parseInt(rightSb.style.width) || 240)
+                         : (parseInt(rightSb.style.width) || rightSb.offsetWidth || 240))
+          : 0;
+        if (voiceBtn) voiceBtn.style.right = voiceWidth + 'px';
+        if (sbBtn) {
+          sbBtn.style.right = (voiceWidth + sbWidth) + 'px';
+          // When the sb panel is OPEN, the toggle button sits at the panel's
+          // left edge — a horizontal position the voice/users toggle never
+          // occupies. Align it with the voice header (top: 72px) so it stops
+          // visually crowding the first content row, which under the prior
+          // 114px stagger looked like an overlap with the top of the sound
+          // list. When the panel is CLOSED, both toggles can end up at
+          // right:0, so restore the 114px stagger to keep them from stacking.
+          sbBtn.style.top = sbOpen ? '72px' : '114px';
+        }
+      };
+
+      place(false);                       // immediate: target width (smooth during anim)
+      clearTimeout(window._sbToggleRealignTimer);
+      window._sbToggleRealignTimer = setTimeout(() => place(true), 300); // settle: real width
     };
     window._updateSbToggleRight();
   }
