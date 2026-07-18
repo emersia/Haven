@@ -399,12 +399,18 @@ _setupNotifications() {
       // On Desktop the preload's own footer is always visible; don't touch it
       if (_hasDesktopFooter) return;
       const show = showStatusBarToggle.checked;
+      const sb = document.getElementById('status-bar');
       if (show) {
         document.documentElement.removeAttribute('data-hide-statusbar');
-        const sb = document.getElementById('status-bar');
         if (sb) sb.style.setProperty('display', 'flex', 'important');
       } else {
         document.documentElement.setAttribute('data-hide-statusbar', '1');
+        // The show branch sets an INLINE `display: flex !important`, and inline
+        // !important outranks the stylesheet's `[data-hide-statusbar] .status-bar
+        // { display: none !important }`. Leaving it in place meant the bar could
+        // be shown once and then never hidden again — the attribute flipped, the
+        // checkbox unchecked, and the bar stayed on screen regardless.
+        if (sb) sb.style.removeProperty('display');
       }
     };
     showStatusBarToggle.addEventListener('change', () => {
