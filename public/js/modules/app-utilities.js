@@ -464,8 +464,10 @@ _formatContent(str) {
     const fileSize = this._escapeHtml(fileMatch[3]);
     const ext = fileName.split('.').pop().toLowerCase();
     const icon = { pdf: '📄', zip: '📦', '7z': '📦', rar: '📦', tar: '📦', gz: '📦',
-      mp3: '🎵', ogg: '🎵', wav: '🎵', flac: '🎵', aac: '🎵', wma: '🎵',
+      mp3: '🎵', ogg: '🎵', oga: '🎵', wav: '🎵', flac: '🎵', aac: '🎵', wma: '🎵',
+      m4a: '🎵', opus: '🎵', weba: '🎵',
       mp4: '🎬', webm: '🎬', mkv: '🎬', avi: '🎬', mov: '🎬', flv: '🎬',
+      m4v: '🎬', ogv: '🎬',
       doc: '📝', docx: '📝', xls: '📊', xlsx: '📊', ppt: '📊', pptx: '📊',
       txt: '📄', csv: '📄', json: '📄', md: '📄', log: '📄',
       exe: '⚙️', msi: '⚙️', bat: '⚙️', cmd: '⚙️', ps1: '⚙️', sh: '⚙️',
@@ -478,14 +480,18 @@ _formatContent(str) {
       'cpl','inf','reg','dll','ocx','sys','drv',
       'sh','app','dmg','pkg','deb','rpm','appimage',
     ]);
-    // Audio/video get inline players
-    if (['mp3', 'ogg', 'wav'].includes(ext)) {
+    // Audio/video get inline players. The extension lists are optimistic —
+    // a container being playable depends on the codecs inside it, not just the
+    // extension (a .mov holding ProRes or HEVC won't decode in most browsers).
+    // _setupVideos swaps the player back out for a download link
+    // if the element fires `error`, so listing a format here is safe.
+    if (['mp3', 'ogg', 'oga', 'wav', 'm4a', 'aac', 'flac', 'opus', 'weba'].includes(ext)) {
       return `<div class="file-attachment">
         <div class="file-info">${icon} <span class="file-name">${fileName}</span> <span class="file-size">(${fileSize})</span></div>
-        <audio controls preload="none" src="${fileUrl}"></audio>
+        <audio controls preload="none" src="${fileUrl}" class="file-audio"></audio>
       </div>`;
     }
-    if (['mp4', 'webm'].includes(ext)) {
+    if (['mp4', 'webm', 'mov', 'm4v', 'ogv'].includes(ext)) {
       return `<div class="file-attachment">
         <div class="file-info">${icon} <span class="file-name">${fileName}</span> <span class="file-size">(${fileSize})</span></div>
         <div class="file-video-wrap">

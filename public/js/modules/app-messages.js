@@ -1251,14 +1251,29 @@ _bindPinsPiPDrag() {
 
 // ── Link Previews ─────────────────────────────────────
 
-/** Wire up fullscreen button and PiP seek support for uploaded video elements */
+/**
+ * Wire up fullscreen button and PiP seek support for uploaded video elements,
+ * plus the undecodable-media download fallback for both video and audio.
+ */
 _setupVideos(containerEl) {
+  containerEl.querySelectorAll('.file-audio').forEach(audio => {
+    if (audio.dataset.havenSetup) return;
+    audio.dataset.havenSetup = '1';
+    audio.addEventListener('error', () => this._fallbackToDownload(audio), { once: true });
+  });
+
   containerEl.querySelectorAll('.file-video').forEach(video => {
     if (video.dataset.havenSetup) return;
     video.dataset.havenSetup = '1';
 
     // ── Generate thumbnail poster from first frame ──
     this._generateVideoThumbnail(video);
+
+    // Container extension is only a hint at what's inside: a .mov carrying
+    // ProRes/HEVC, or an .mp4 with an exotic codec, decodes nowhere. When the
+    // element gives up, collapse the whole attachment back to a download link
+    // rather than leaving a broken player sitting in the message.
+    video.addEventListener('error', () => this._fallbackToDownload(video), { once: true });
 
     // PiP: wire up MediaSession so the PiP window shows a seek bar
     const updatePos = () => {
@@ -1307,6 +1322,53 @@ _setupVideos(containerEl) {
       video.removeEventListener('playing', updatePos);
     });
   });
+},
+
+/**
+ * Replace a media element that failed to decode with a plain download link.
+ * The extension told us the container looked playable but the codecs inside
+ * weren't (ProRes/HEVC .mov being the common case), so the user still gets the
+ * file — just not inline. Built with DOM nodes rather than innerHTML because
+ * the filename is attacker-controlled.
+ */
+_fallbackToDownload(mediaEl) {
+  const box = mediaEl.closest('.file-attachment');
+  if (!box || box.dataset.havenFallback) return;
+  box.dataset.havenFallback = '1';
+
+  const url = mediaEl.currentSrc || mediaEl.src;
+  if (!url) return;
+
+  // Prefer the real filename off any existing download control; the .file-info
+  // label is the fallback, and it's already the name we rendered.
+  const name = box.querySelector('.file-download-link[download]')?.getAttribute('download')
+    || box.querySelector('.file-name')?.textContent
+    || 'file';
+  const size = box.querySelector('.file-size')?.textContent || '';
+  const isVideo = mediaEl.tagName === 'VIDEO';
+
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = name;
+  link.className = 'file-download-link';
+  link.title = `${name} — cannot be played in this browser`;
+  if (!url.startsWith('blob:')) { link.target = '_blank'; link.rel = 'noopener noreferrer'; }
+
+  const parts = [
+    ['file-icon', isVideo ? '🎬' : '🎵'],
+    ['file-name', name],
+    ['file-size', size],
+    ['file-download-arrow', '⬇'],
+  ];
+  for (const [cls, text] of parts) {
+    if (!text) continue;
+    const span = document.createElement('span');
+    span.className = cls;
+    span.textContent = text;
+    link.appendChild(span);
+  }
+
+  box.replaceChildren(link);
 },
 
 /** Generate a poster thumbnail for a video element by capturing its first visible frame */

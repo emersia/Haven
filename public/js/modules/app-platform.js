@@ -1402,7 +1402,7 @@ _decryptE2EFiles(root) {
           mediaEl.controls = true;
           mediaEl.preload = 'metadata';
           mediaEl.src = objectUrl;
-          if (isVideo) mediaEl.className = 'file-video';
+          mediaEl.className = isVideo ? 'file-video' : 'file-audio';
 
           row.classList.remove('e2e-file-loading');
           row.innerHTML = '';
@@ -1437,6 +1437,17 @@ _decryptE2EFiles(root) {
             if (!document.contains(mediaEl)) { URL.revokeObjectURL(objectUrl); obs.disconnect(); }
           });
           obs.observe(document.body, { childList: true, subtree: true });
+
+          // Same undecodable-container fallback the plaintext path gets: the
+          // decrypt succeeded, so the file is fine — the browser just can't play
+          // it. Disconnect the revoke observer first, since the fallback pulls
+          // mediaEl out of the DOM and would otherwise kill the blob URL the
+          // download link is about to point at.
+          mediaEl.addEventListener('error', () => {
+            obs.disconnect();
+            this._fallbackToDownload(mediaEl);
+          }, { once: true });
+
           btn.disabled = false;
           return;
         }
