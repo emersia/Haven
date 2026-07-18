@@ -3068,13 +3068,58 @@ _setupUI() {
       // Update active state
       document.querySelectorAll('.settings-nav-item').forEach(n => n.classList.remove('active'));
       item.classList.add('active');
+      // Suppress scroll-spy briefly so the smooth-scroll animation passing over
+      // intermediate sections doesn't steal the highlight from what was clicked.
+      this._settingsSpyMuteUntil = Date.now() + 800;
     });
   });
+
+  // ── Settings scroll-spy ──────────────────────────────
+  // (language picker is built above; scroll-spy follows)
+  // The settings body is one long scrolling column, not a tab switcher, so the
+  // nav highlight used to sit on whatever was last clicked (or "Language" by
+  // default) no matter where you'd scrolled to. That made the nav actively
+  // misleading — it would claim you were in Language while you were looking at
+  // Activity. Track the topmost visible section instead.
+  const settingsBody = document.getElementById('settings-body-user');
+  if (settingsBody) {
+    const syncNavHighlight = () => {
+      if (Date.now() < (this._settingsSpyMuteUntil || 0)) return;
+      const navItems = Array.from(document.querySelectorAll('.settings-nav-user .settings-nav-item'));
+      if (!navItems.length) return;
+      const bodyTop = settingsBody.getBoundingClientRect().top;
+
+      let current = null;
+      for (const item of navItems) {
+        const section = document.getElementById(item.dataset.target);
+        if (!section || section.offsetParent === null) continue;
+        // The last section whose top has passed the viewport top is the one
+        // being read; anything below that hasn't been reached yet.
+        if (section.getBoundingClientRect().top - bodyTop <= 8) current = item;
+        else break;
+      }
+      if (!current) current = navItems[0];
+      if (current.classList.contains('active')) return;
+
+      navItems.forEach(n => n.classList.remove('active'));
+      current.classList.add('active');
+      // Keep the highlighted entry reachable in a long nav list.
+      current.scrollIntoView({ block: 'nearest' });
+    };
+
+    let spyQueued = false;
+    settingsBody.addEventListener('scroll', () => {
+      if (spyQueued) return;
+      spyQueued = true;
+      requestAnimationFrame(() => { spyQueued = false; syncNavHighlight(); });
+    }, { passive: true });
+  }
 
   // ── Language switcher ────────────────────────────────
   document.getElementById('language-select')?.addEventListener('change', (e) => {
     if (window.i18n) i18n.setLocale(e.target.value);
   });
+  this._buildLanguagePicker();
 
   // ── Password change ──────────────────────────────────
   document.getElementById('change-password-btn').addEventListener('click', async () => {
