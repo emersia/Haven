@@ -13489,6 +13489,81 @@ ul.chat-list { list-style-type: disc; }
 [data-theme="halo"] .ns-slider {
   --track-bg: #0d1a0d;
 }
+/* ── Language picker ───────────────────────────────────── */
+/* Custom control because a native <option> cannot contain an <img>, and
+   Windows renders Unicode flag emoji as bare letter pairs ("GB", "RU"). */
+.lang-select-hidden { display: none !important; }
+
+.lang-picker { position: relative; min-width: 190px; }
+
+.lang-picker-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+.lang-picker-btn:hover { border-color: var(--accent); }
+.lang-caret { margin-left: auto; opacity: 0.6; font-size: 10px; }
+
+.lang-picker-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 60;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+  padding: 4px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.lang-picker-list[hidden] { display: none; }
+
+.lang-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+.lang-picker-item:hover { background: var(--bg-tertiary); }
+
+.lang-flag {
+  width: 20px;
+  height: 15px;
+  object-fit: cover;
+  border-radius: 2px;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.08);
+}
+/* Fallback for a locale with no bundled artwork. */
+.lang-flag-text {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+}
+
 [data-theme="halo"] .slider-sm::-webkit-slider-thumb,
 [data-theme="halo"] .ns-slider::-webkit-slider-thumb {
   box-shadow: 0 0 8px rgba(79, 195, 247, 0.5);

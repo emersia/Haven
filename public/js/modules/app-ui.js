@@ -4449,6 +4449,106 @@ _setupUI() {
 // CHANNEL & MESSAGE LINKS — copy/share deep-links
 // ═══════════════════════════════════════════════════════
 
+/**
+ * Replace the native language <select> with a custom dropdown that can show
+ * real flag artwork.
+ *
+ * Windows browsers refuse to render Unicode regional-indicator flags and fall
+ * back to the bare two-letter code, so "🇬🇧 English" displayed as "GB English".
+ * The emoji picker already solved this by shipping SVGs (see builtinEmojis in
+ * app.js), but that fix can't apply here: an <option> element renders text
+ * only — no images, no markup — so no amount of CSS or emoji font work will
+ * put a flag inside a native select.
+ *
+ * The original <select> is kept in the DOM as the source of truth and still
+ * receives its 'change' event, so the existing i18n wiring is untouched; this
+ * only swaps the visible control.
+ */
+_buildLanguagePicker() {
+  const select = document.getElementById('language-select');
+  if (!select || select.dataset.havenPicker) return;
+  select.dataset.havenPicker = '1';
+
+  // Locale -> flag SVG. Only ISO country codes with artwork in
+  // public/emoji/flags/ can appear; anything unmapped falls back to a text
+  // badge rather than a broken image.
+  const FLAGS = { en: 'gb', fr: 'fr', de: 'de', es: 'es', pl: 'pl', ru: 'ru', zh: 'cn' };
+
+  const options = Array.from(select.options).map(o => ({
+    value: o.value,
+    // Strip the now-redundant emoji prefix from the label.
+    label: o.textContent.replace(/^[\p{Extended_Pictographic}\p{Regional_Indicator}️\s]+/u, '').trim() || o.value,
+    flag: FLAGS[o.value] || null,
+  }));
+
+  const wrap = document.createElement('div');
+  wrap.className = 'lang-picker';
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'lang-picker-btn';
+  button.setAttribute('aria-haspopup', 'listbox');
+  button.setAttribute('aria-expanded', 'false');
+
+  const list = document.createElement('div');
+  list.className = 'lang-picker-list';
+  list.setAttribute('role', 'listbox');
+  list.hidden = true;
+
+  const faceFor = (opt) => {
+    const flag = opt.flag
+      ? `<img class="lang-flag" src="/emoji/flags/${opt.flag}.svg" alt="">`
+      : `<span class="lang-flag lang-flag-text">${this._escapeHtml(opt.value.toUpperCase())}</span>`;
+    return `${flag}<span class="lang-name">${this._escapeHtml(opt.label)}</span>`;
+  };
+
+  const paintButton = () => {
+    const cur = options.find(o => o.value === select.value) || options[0];
+    if (cur) button.innerHTML = faceFor(cur) + '<span class="lang-caret">▾</span>';
+  };
+
+  list.innerHTML = options.map(o =>
+    `<button type="button" class="lang-picker-item" role="option" data-value="${this._escapeHtml(o.value)}">${faceFor(o)}</button>`
+  ).join('');
+
+  const close = () => {
+    list.hidden = true;
+    button.setAttribute('aria-expanded', 'false');
+    document.removeEventListener('click', onOutside, true);
+  };
+  const onOutside = (e) => { if (!wrap.contains(e.target)) close(); };
+
+  button.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const opening = list.hidden;
+    list.hidden = !opening;
+    button.setAttribute('aria-expanded', String(opening));
+    if (opening) setTimeout(() => document.addEventListener('click', onOutside, true), 0);
+    else close();
+  });
+
+  list.querySelectorAll('.lang-picker-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      select.value = item.dataset.value;
+      // Drive the real control so the existing listener does the work.
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      paintButton();
+      close();
+    });
+  });
+
+  paintButton();
+  wrap.appendChild(button);
+  wrap.appendChild(list);
+  select.parentElement.insertBefore(wrap, select);
+  // Kept for state + the change event, but no longer the visible control.
+  select.classList.add('lang-select-hidden');
+
+  // Locale changes made elsewhere (or restored on load) must repaint the face.
+  select.addEventListener('change', paintButton);
+},
+
 _canShareChannelLink(code) {
   if (!code) return false;
   const ch = (this.channels || []).find(c => c.code === code);
