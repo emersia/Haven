@@ -7431,6 +7431,15 @@ details.sound-section:not([open]) .sound-section-label::before {
   padding: 4px 8px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 4px;
+  /* The slot row is what you click to choose which emoji to replace, so it
+     must never scroll out of reach behind the emoji grid. Pinning it and
+     refusing to let flex shrink it keeps it visible at any panel height. */
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg-card);
+  flex-shrink: 0;
+  flex-wrap: wrap;
 }
 .quick-emoji-slot {
   border: 2px solid transparent;

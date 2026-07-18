@@ -1827,8 +1827,13 @@ _saveQuickEmojis(emojis) {
 },
 
 _showQuickEmojiEditor(picker, msgEl, msgId) {
-  // Remove any existing editor
-  document.querySelectorAll('.quick-emoji-editor').forEach(el => el.remove());
+  // Remove any existing editor AND any open full picker. Both panels carry the
+  // .reaction-full-picker class and both are absolutely positioned at
+  // bottom:100%/right:0 on the same message, so leaving one behind stacks two
+  // 320px panels on the exact same spot — which reads as "the emoji pane
+  // covered everything and I can't reach the slot row". _showFullReactionPicker
+  // already clears both directions; this is the missing mirror of that.
+  document.querySelectorAll('.quick-emoji-editor, .reaction-full-picker').forEach(el => el.remove());
 
   const editor = document.createElement('div');
   editor.className = 'quick-emoji-editor reaction-full-picker';
@@ -1956,6 +1961,34 @@ _showQuickEmojiEditor(picker, msgEl, msgId) {
   editor.appendChild(doneBtn);
 
   msgEl.appendChild(editor);
+
+  // Placement parity with _showReactionPicker. Without this the editor is
+  // positioned by CSS alone (always above the message), so opening it on a
+  // message near the top of the viewport — or inside a PiP panel, which clips
+  // overflow — pushes the slot row off-screen.
+  const pipParent = msgEl.closest('.dm-pip-panel, .thread-panel.pip');
+  if (pipParent) {
+    const msgRect = msgEl.getBoundingClientRect();
+    document.body.appendChild(editor);
+    editor.style.position = 'fixed';
+    editor.style.zIndex = '100021';
+    requestAnimationFrame(() => {
+      const r = editor.getBoundingClientRect();
+      let top = msgRect.top - r.height - 6;
+      if (top < 4) top = Math.min(msgRect.bottom + 6, window.innerHeight - r.height - 8);
+      editor.style.top = Math.max(4, top) + 'px';
+      editor.style.right = Math.max(8, window.innerWidth - msgRect.right) + 'px';
+      editor.style.left = 'auto';
+      editor.style.bottom = 'auto';
+    });
+  } else {
+    requestAnimationFrame(() => {
+      const r = editor.getBoundingClientRect();
+      const container = msgEl.closest('#thread-messages, #messages, #dm-pip-messages');
+      const containerTop = container ? container.getBoundingClientRect().top : 0;
+      if (r.top < containerTop + 4) editor.classList.add('flip-below');
+    });
+  }
 },
 
 _showReactionPicker(msgEl, msgId) {
