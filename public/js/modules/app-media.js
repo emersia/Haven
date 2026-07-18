@@ -2908,6 +2908,26 @@ _showImageContextMenu(e, src) {
   menu.style.left = e.clientX + 'px';
   menu.style.top = e.clientY + 'px';
   document.body.appendChild(menu);
+
+  // Warm the image bytes while the menu is on screen. By the time "Copy Image"
+  // is clicked this is usually already resolved, so the clipboard write is the
+  // first thing that awaits rather than the last. Errors are swallowed here —
+  // the copy handler re-fetches and reports properly if this didn't land.
+  this._ctxImageBlobSrc = src;
+  this._ctxImageBlob = (async () => {
+    const resp = await fetch(src, { credentials: 'same-origin' });
+    if (!resp.ok) throw new Error('fetch ' + resp.status);
+    const blob = await resp.blob();
+    if (blob.type === 'image/png') return blob;
+    const bitmap = await createImageBitmap(blob);
+    const canvas = document.createElement('canvas');
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    canvas.getContext('2d').drawImage(bitmap, 0, 0);
+    return await new Promise((res, rej) =>
+      canvas.toBlob(b => b ? res(b) : rej(new Error('toBlob null')), 'image/png'));
+  })();
+  this._ctxImageBlob.catch(() => { this._ctxImageBlob = null; });
   // Clamp to viewport
   const rect = menu.getBoundingClientRect();
   if (rect.right > window.innerWidth) menu.style.left = (window.innerWidth - rect.width - 8) + 'px';
@@ -2971,7 +2991,20 @@ _showImageContextMenu(e, src) {
           if (typeof ClipboardItem === 'undefined' || !navigator.clipboard?.write) {
             throw new Error('Clipboard API unavailable');
           }
-          const blobPromise = (async () => toPngBlob(await fetchAsBlob()))();
+          // Chromium rejects clipboard writes with "Write permission denied"
+          // whenever the document isn't focused — which is the normal state
+          // right after dismissing a context menu, and the reported failure
+          // here. Pull focus back before asking, and give the focus change a
+          // frame to land.
+          if (!document.hasFocus()) {
+            try { window.focus(); } catch {}
+            await new Promise(r => requestAnimationFrame(r));
+          }
+          // Reuse the blob the menu started fetching on open where possible, so
+          // a slow image can't stretch this past the transient user activation.
+          const blobPromise = this._ctxImageBlob && this._ctxImageBlobSrc === src
+            ? this._ctxImageBlob
+            : (async () => toPngBlob(await fetchAsBlob()))();
           await navigator.clipboard.write([
             new ClipboardItem({ 'image/png': blobPromise })
           ]);
@@ -2987,7 +3020,16 @@ _showImageContextMenu(e, src) {
             return;
           } catch (err2) {
             console.error('[Haven] writeText fallback failed:', err2);
-            this._showToast('Failed to copy image: ' + (err.message || err), 'error');
+            // Report the failure that actually ended the chain. Previously this
+            // surfaced err (the image write) even though err2 (the text write)
+            // is what just failed, which sent debugging down the wrong path.
+            const denied = /denied|NotAllowed/i.test(String(err2?.name) + String(err2?.message));
+            this._showToast(
+              denied
+                ? 'Clipboard blocked by the browser — click the page first, then retry'
+                : 'Failed to copy image: ' + (err2?.message || err2),
+              'error'
+            );
           }
         }
       })();
